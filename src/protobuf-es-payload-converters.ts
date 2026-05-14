@@ -37,16 +37,20 @@ export type ProtobufEsPayloadConverterOptions = ProtobufEsSchemaSource & {
   readonly encoding?: ProtobufEsEncodePreference;
 };
 
+type NormalizedProtobufEsPayloadConverterOptions = {
+  readonly registry: Registry;
+  readonly encode: ProtobufEsEncodePreference;
+};
+
 abstract class ProtobufEsPayloadConverter implements PayloadConverterWithEncoding {
   protected readonly registry: Registry | undefined;
   public abstract readonly encodingType: string;
 
   protected constructor(registryOrSchemas?: ProtobufEsRegistryInput) {
-    if (registryOrSchemas === undefined) {
-      return;
-    }
-
-    this.registry = normalizeRegistry(registryOrSchemas);
+    this.registry =
+      registryOrSchemas === undefined
+        ? undefined
+        : normalizeRegistry(registryOrSchemas);
   }
 
   public abstract toPayload<T>(value: T): Payload | undefined;
@@ -92,17 +96,17 @@ abstract class ProtobufEsPayloadConverter implements PayloadConverterWithEncodin
 
   protected constructPayload({
     messageTypeName,
-    message,
+    data,
   }: {
     readonly messageTypeName: string;
-    readonly message: Uint8Array;
+    readonly data: Uint8Array;
   }): Payload {
     return {
       metadata: {
         [METADATA_ENCODING_KEY]: encodeString(this.encodingType),
         [METADATA_MESSAGE_TYPE_KEY]: encodeString(messageTypeName),
       },
-      data: message,
+      data,
     };
   }
 }
@@ -122,14 +126,18 @@ export class ProtobufEsBinaryPayloadConverter extends ProtobufEsPayloadConverter
     const schema = this.getSchemaOrThrow(value.$typeName);
     return this.constructPayload({
       messageTypeName: value.$typeName,
-      message: toBinary(schema, value),
+      data: toBinary(schema, value),
     });
   }
 
   public fromPayload<T>(payload: Payload): T {
     const { schema, data } = this.validatePayload(payload);
-    const localData = new Uint8Array(data.buffer, data.byteOffset, data.length);
-    return fromBinary(schema, localData) as T;
+    const localDataView = new Uint8Array(
+      data.buffer,
+      data.byteOffset,
+      data.length,
+    );
+    return fromBinary(schema, localDataView) as T;
   }
 }
 
@@ -149,7 +157,7 @@ export class ProtobufEsJsonPayloadConverter extends ProtobufEsPayloadConverter {
     const jsonOptions = this.registry ? { registry: this.registry } : undefined;
     return this.constructPayload({
       messageTypeName: value.$typeName,
-      message: encodeString(JSON.stringify(toJson(schema, value, jsonOptions))),
+      data: encodeString(JSON.stringify(toJson(schema, value, jsonOptions))),
     });
   }
 
@@ -171,10 +179,9 @@ export class DefaultPayloadConverterWithProtobufsEs extends CompositePayloadConv
   public readonly encode: ProtobufEsEncodePreference;
 
   public constructor(options: DefaultPayloadConverterWithProtobufsEsOptions) {
-    const encode = normalizeOptionsEncodePreference(options);
-    const registry = normalizeRegistryFromOptions(options);
+    const { registry, encode } = normalizePayloadConverterOptions(options);
     const [firstProtobufConverter, secondProtobufConverter] =
-      makeOrderedProtobufConverters(registry, encode);
+      createOrderedProtobufConverters(registry, encode);
 
     super(
       new UndefinedPayloadConverter(),
@@ -192,7 +199,7 @@ export function createProtobufEsPayloadConverter(
   registryOrOptions: ProtobufEsPayloadConverterInput,
 ): DefaultPayloadConverterWithProtobufsEs {
   return new DefaultPayloadConverterWithProtobufsEs(
-    normalizePayloadConverterOptions(registryOrOptions),
+    normalizePayloadConverterInput(registryOrOptions),
   );
 }
 
@@ -220,17 +227,17 @@ export const makeBinaryProtobufEsPayloadConverter =
 export const makeJsonProtobufEsPayloadConverter =
   createJsonProtobufEsPayloadConverter;
 
-function makeOrderedProtobufConverters(
-  registryOrSchemas: ProtobufEsRegistryInput,
+function createOrderedProtobufConverters(
+  registry: Registry,
   encode: ProtobufEsEncodePreference,
 ): readonly [PayloadConverterWithEncoding, PayloadConverterWithEncoding] {
-  const binary = new ProtobufEsBinaryPayloadConverter(registryOrSchemas);
-  const json = new ProtobufEsJsonPayloadConverter(registryOrSchemas);
+  const binary = new ProtobufEsBinaryPayloadConverter(registry);
+  const json = new ProtobufEsJsonPayloadConverter(registry);
 
   return encode === "binary" ? [binary, json] : [json, binary];
 }
 
-function normalizePayloadConverterOptions(
+function normalizePayloadConverterInput(
   registryOrOptions: ProtobufEsPayloadConverterInput,
 ): DefaultPayloadConverterWithProtobufsEsOptions {
   if (isPayloadConverterOptions(registryOrOptions)) {
@@ -239,7 +246,15 @@ function normalizePayloadConverterOptions(
 
   return {
     registry: registryOrOptions,
-    encode: "binary",
+  };
+}
+
+function normalizePayloadConverterOptions(
+  options: DefaultPayloadConverterWithProtobufsEsOptions,
+): NormalizedProtobufEsPayloadConverterOptions {
+  return {
+    registry: normalizeRegistry(getRegistryInput(options)),
+    encode: getEncodePreference(options),
   };
 }
 
@@ -256,25 +271,25 @@ function isPayloadConverterOptions(
   );
 }
 
-function normalizeRegistryFromOptions(
+function getRegistryInput(
   options: DefaultPayloadConverterWithProtobufsEsOptions,
-): Registry {
+): ProtobufEsRegistryInput {
   if ("registry" in options && "schemas" in options) {
     throw new TypeError("Specify either `registry` or `schemas`, not both");
   }
 
   if ("registry" in options) {
-    return normalizeRegistry(options.registry);
+    return options.registry;
   }
 
   if ("schemas" in options) {
-    return normalizeRegistry(options.schemas);
+    return options.schemas;
   }
 
   throw new TypeError("`registry` or `schemas` must be provided");
 }
 
-function normalizeOptionsEncodePreference(
+function getEncodePreference(
   options: DefaultPayloadConverterWithProtobufsEsOptions,
 ): ProtobufEsEncodePreference {
   if (
@@ -321,18 +336,10 @@ function normalizeRegistry(
 }
 
 function isRegistry(value: unknown): value is Registry {
-  if (!isRecord(value)) {
-    return false;
-  }
-
-  const registryCandidate = value as {
-    readonly kind?: unknown;
-    readonly getMessage?: unknown;
-  };
-
   return (
-    registryCandidate.kind === "registry" &&
-    typeof registryCandidate.getMessage === "function"
+    isRecord(value) &&
+    value.kind === "registry" &&
+    typeof value.getMessage === "function"
   );
 }
 

@@ -482,6 +482,36 @@ Run a second end-to-end compatibility scenario with:
 - a shared `.proto` workflow argument message
 - the TypeScript converter producing payloads that the Rust worker can decode
 
+### Current E2E Fixture Scope
+
+The repository's no-network local fixture suite currently focuses on the
+release-critical converter packaging and wire-format boundaries that can run
+without production infrastructure:
+
+- `just test-e2e` creates a temporary npm application, installs this package
+  from `npm pack`, installs peer dependencies from local `node_modules`, and
+  verifies ESM import, CommonJS `require()`, named `payloadConverter` export,
+  `require.resolve("./payload-converter.cjs")`, binary/default mode, JSON mode,
+  and `google.protobuf.Empty` payload triples.
+- The SDK loader fixture uses `@temporalio/common/lib/internal-non-workflow`
+  `loadDataConverter({ payloadConverterPath })` against the packed package to
+  verify the actual Temporal SDK loader accepts the app-local named
+  `payloadConverter` export and rejects missing or invalid exports.
+- The Deno fixture uses the same packed package and local peer dependency
+  install, then runs `deno run --node-modules-dir=manual` to verify converter
+  construction and binary/JSON protobuf round trips.
+- The Rust fixture compiles a small `rustc` program with no external crates to
+  verify the binary payload triple for `google.protobuf.Timestamp` and
+  `google.protobuf.Empty` in both directions: TypeScript encode -> Rust decode,
+  and Rust encode -> TypeScript decode.
+
+The suite deliberately does not yet start a live Temporal TypeScript worker or
+Rust Temporal worker. Those scenarios require additional Temporal runtime
+dependencies and, for the TypeScript test server path, may require network
+downloads. Until those dependencies are introduced deliberately, the local suite
+validates the `payloadConverterPath` module contract through the same
+`loadDataConverter` helper used by Temporal SDK client and worker setup.
+
 ## Release Criteria
 
 Before the first public release:

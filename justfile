@@ -22,7 +22,29 @@ typecheck:
     @just _run-package-script typecheck
 
 test:
-    @just _run-package-script test
+    @just test-unit
+    @just test-e2e
+
+test-unit:
+    @just _run-package-script test:unit
+
+test-e2e: build
+    node --test test/e2e/npm-packed-fixture.test.mjs
+    node --test test/e2e/sdk-loader-fixture.test.mjs
+    node --test test/e2e/deno-packed-fixture.test.mjs
+    node --test test/e2e/rust-wire-format.test.mjs
+
+test-e2e-npm: build
+    node --test test/e2e/npm-packed-fixture.test.mjs
+
+test-e2e-sdk-loader: build
+    node --test test/e2e/sdk-loader-fixture.test.mjs
+
+test-e2e-deno: build
+    node --test test/e2e/deno-packed-fixture.test.mjs
+
+test-e2e-rust: build
+    node --test test/e2e/rust-wire-format.test.mjs
 
 build:
     @just _run-package-script build
