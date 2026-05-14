@@ -35,6 +35,7 @@ Codex project instructions follow the documented repo-level `AGENTS.md` discover
 - Repo-local skills currently cover development, testing, maintenance, compatibility, and release workflows for this package.
 - The spec distinguishes default Temporal TypeScript composite behavior from the binary protobuf wire contract needed for Rust/Go generated-client interoperability.
 - `payloadConverterPath` examples must export a named `payloadConverter`.
+- `.github/workflows/test.yml` runs the npm test suite on Ubuntu for pushes to `main` and pull requests.
 
 ## Commands
 
@@ -56,5 +57,7 @@ Codex project instructions follow the documented repo-level `AGENTS.md` discover
 - `just release-check`: run the full local release-check lifecycle.
 
 Publishing is handled by `.github/workflows/publish.yml` when a GitHub release is published with a tag that matches `package.json`.
+
+Pull request and `main` branch test CI is handled by `.github/workflows/test.yml`.
 
 Package lifecycle recipes use npm. Keep `package.json` scripts and `justfile` recipes aligned when commands change.
