@@ -512,6 +512,13 @@ downloads. Until those dependencies are introduced deliberately, the local suite
 validates the `payloadConverterPath` module contract through the same
 `loadDataConverter` helper used by Temporal SDK client and worker setup.
 
+An opt-in `just test-e2e-temporal-worker` prototype exists for the live
+TypeScript SDK path. It starts a local Temporal dev server through an installed
+Temporal CLI, then runs `@temporalio/client` and `@temporalio/worker` with
+`dataConverter.payloadConverterPath`. This recipe is intentionally excluded
+from `just test-e2e` and `just release-check` until the Temporal CLI dependency
+and runtime cost are accepted as stable release-check requirements.
+
 ## Release Criteria
 
 Before the first public release:

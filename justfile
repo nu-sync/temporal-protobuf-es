@@ -46,6 +46,9 @@ test-e2e-deno: build
 test-e2e-rust: build
     node --test test/e2e/rust-wire-format.test.mjs
 
+test-e2e-temporal-worker: build
+    node --test test/e2e/temporal-worker-prototype.test.mjs
+
 build:
     @just _run-package-script build
 

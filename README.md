@@ -30,7 +30,10 @@ just test-e2e-npm
 just test-e2e-sdk-loader
 just test-e2e-deno
 just test-e2e-rust
+just test-e2e-temporal-worker
 just verify
 ```
 
 The e2e suite installs the packed npm tarball into temporary fixture apps, checks Node ESM/CommonJS loading, verifies Temporal SDK `loadDataConverter` behavior for `payloadConverterPath`, runs a Deno npm-import round trip, and verifies Rust binary wire-format compatibility without external services.
+
+`just test-e2e-temporal-worker` is an opt-in prototype that starts a local Temporal dev server through the Temporal CLI, then runs a real `@temporalio/client` and `@temporalio/worker` with `dataConverter.payloadConverterPath`.
