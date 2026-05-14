@@ -1,5 +1,7 @@
 # temporal-protobuf-es
 
+[![npm](https://img.shields.io/npm/v/%40nu-sync%2Ftemporal-protobuf-es.svg)](https://www.npmjs.com/package/@nu-sync/temporal-protobuf-es)
+
 Community-maintained Temporal TypeScript payload converters for protobuf-es messages.
 
 ## Usage
