@@ -101,16 +101,20 @@ The package should expose generic converter building blocks:
 
 It should also expose a small helper for the common case. Prefer the `create*`
 names in documentation; keep `make*` aliases for callers who prefer that style.
+Documentation should lead with generated schema inventories because that is the
+most common application shape for Temporal generated clients.
 
 ```ts
 import { createProtobufEsPayloadConverter } from "@nu-sync/temporal-protobuf-es";
-import {
-  StartOrderRequestSchema,
-  StartOrderResultSchema,
-} from "./gen/messages_pb";
+import { EmptySchema } from "@bufbuild/protobuf/wkt";
+import { schemas as orderSchemas } from "./gen/orders_pb_register";
 
 export const payloadConverter = createProtobufEsPayloadConverter({
-  schemas: [StartOrderRequestSchema, StartOrderResultSchema],
+  schemas: [
+    ...orderSchemas,
+    // Only needed when workflows use google.protobuf.Empty.
+    EmptySchema,
+  ],
   encoding: "binary",
 });
 ```
@@ -279,6 +283,12 @@ const worker = await Worker.create({
 ```
 
 A plugin wrapper may be added after the base converter is stable. The converter should remain the core abstraction; a plugin should only improve wiring ergonomics.
+
+The first adoption path should stay simple: generated code or application code
+owns schema inventory, app-local `payload-converter` modules export a named
+`payloadConverter`, and this package supplies the converter construction helper.
+Future plugin or generator wrappers should preserve that explicit converter
+module shape.
 
 ### `payloadConverterPath` Module Contract
 
@@ -563,6 +573,6 @@ The first public release met these criteria; future releases should keep them tr
 
 ## Open Questions
 
-- Should the package ship a Temporal `SimplePlugin` wrapper, a custom plugin class, or only converter helpers for the first release?
-- Should `protoc-gen-ts-temporal` generate the app-local `payload-converter.ts` file automatically?
+- Should a later release ship a Temporal `SimplePlugin` wrapper or custom plugin class once the converter-helper path has more adoption data?
+- Should `protoc-gen-ts-temporal` generate the app-local `payload-converter.ts` file automatically after the generated schema inventory pattern is stable?
 - Should JSON protobuf compatibility be considered a required cross-language guarantee, or should binary protobuf be the primary supported path?
