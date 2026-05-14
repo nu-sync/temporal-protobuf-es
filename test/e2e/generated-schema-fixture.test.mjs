@@ -10,7 +10,7 @@ import {
   run,
 } from "./support/fixture-utils.mjs";
 
-test("packed package accepts generated protobuf-es schema inventories", () => {
+test("packed package accepts Buf-generated protobuf-es schema inventories", () => {
   const tempDir = makeTempDir("generated-schema-fixture");
 
   try {
@@ -46,7 +46,7 @@ import { schemas } from "./gen/orders_pb_register.mjs";
 import {
   StartOrderRequestSchema,
   StartOrderResultSchema,
-} from "./gen/orders_pb.mjs";
+} from "./gen/orders_pb.js";
 import { payloadConverter } from "./payload-converter.mjs";
 
 const textDecoder = new TextDecoder();

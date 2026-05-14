@@ -509,10 +509,12 @@ without production infrastructure:
   `loadDataConverter({ payloadConverterPath })` against the packed package to
   verify the actual Temporal SDK loader accepts the app-local named
   `payloadConverter` export and rejects missing or invalid exports.
-- The generated schema fixture copies a tracked `orders.proto`, a generated
-  protobuf-es-style `orders_pb.mjs`, and an `_pb_register`-style schema
-  inventory into a temporary app, then verifies the packed package accepts that
-  inventory for binary and JSON protobuf payloads.
+- The generated schema fixture copies a tracked `orders.proto`, Buf-generated
+  `@bufbuild/protoc-gen-es` output (`orders_pb.js` and `orders_pb.d.ts`), and an
+  `_pb_register`-style schema inventory into a temporary app, then verifies the
+  packed package accepts that inventory for binary and JSON protobuf payloads.
+  `just generate-fixtures` runs `buf generate`, and `just check` fails if the
+  tracked generated files are stale.
 - The Deno fixture uses the same packed package and local peer dependency
   install, then runs `deno run --node-modules-dir=manual` to verify converter
   construction and binary/JSON protobuf round trips.

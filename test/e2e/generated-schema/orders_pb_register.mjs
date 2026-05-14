@@ -1,6 +1,6 @@
 import {
   StartOrderRequestSchema,
   StartOrderResultSchema,
-} from "./orders_pb.mjs";
+} from "./orders_pb.js";
 
 export const schemas = [StartOrderRequestSchema, StartOrderResultSchema];

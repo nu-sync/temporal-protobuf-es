@@ -10,6 +10,9 @@ status:
 check: _check-docs _check-skills
     @just _run-package-script check
 
+check-generated-fixtures:
+    @just _run-package-script check:generated-fixtures
+
 verify:
     @just _run-package-script verify
 
@@ -18,6 +21,9 @@ verify-integration:
 
 format:
     @just _run-package-script format
+
+generate-fixtures:
+    @just _run-package-script generate:fixtures
 
 lint:
     @just _run-package-script lint

@@ -41,9 +41,11 @@ Codex project instructions follow the documented repo-level `AGENTS.md` discover
 - `just --list`: show available recipes.
 - `just status`: show concise git status.
 - `just check`: run all currently available repository checks.
+- `just check-generated-fixtures`: regenerate Buf/protobuf-es e2e fixtures and fail if generated outputs are stale.
 - `just verify`: run broad local verification.
 - `just verify-integration`: run `just release-check` plus the live Temporal worker/client fixture; requires the Temporal CLI.
 - `just format`: check package formatting.
+- `just generate-fixtures`: run Buf/protobuf-es generation for tracked e2e fixture protos.
 - `just lint`: lint package source.
 - `just typecheck`: typecheck package source.
 - `just test`: run package tests.

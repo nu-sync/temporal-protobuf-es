@@ -24,9 +24,11 @@
     "README.md"
   ],
   "scripts": {
-    "check": "node scripts/check-repo.mjs",
+    "check": "node scripts/check-repo.mjs && npm run check:generated-fixtures",
+    "check:generated-fixtures": "npm run generate:fixtures && git diff --exit-code -- test/e2e/generated-schema/orders_pb.d.ts test/e2e/generated-schema/orders_pb.js",
     "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json && tsc -p tsconfig.cjs.json && node -e \"require('node:fs').writeFileSync('dist/cjs/package.json', JSON.stringify({ type: 'commonjs' }) + '\\n')\"",
-    "format": "prettier --check package.json package-lock.json tsconfig.json tsconfig.build.json tsconfig.cjs.json README.md \"scripts/**/*.mjs\" \"src/**/*.ts\" \"test/**/*.cjs\" \"test/**/*.mjs\"",
+    "format": "prettier --check package.json package-lock.json tsconfig.json tsconfig.build.json tsconfig.cjs.json buf.gen.yaml README.md \"scripts/**/*.mjs\" \"src/**/*.ts\" \"test/**/*.cjs\" \"test/**/*.mjs\"",
+    "generate:fixtures": "buf generate",
     "lint": "npm run typecheck",
     "pack": "npm pack --dry-run",
     "release-check": "npm run verify && npm run format && npm run pack",
@@ -59,7 +61,9 @@
     "@temporalio/common": "^1.17.1"
   },
   "devDependencies": {
+    "@bufbuild/buf": "^1.69.0",
     "@bufbuild/protobuf": "^2.12.0",
+    "@bufbuild/protoc-gen-es": "^2.12.0",
     "@temporalio/client": "^1.17.1",
     "@temporalio/common": "^1.17.1",
     "@temporalio/testing": "^1.17.1",

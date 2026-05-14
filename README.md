@@ -65,9 +65,12 @@ just test-e2e-rust
 just test-e2e-temporal-worker
 just verify
 just verify-integration
+just generate-fixtures
 ```
 
 The e2e suite installs the packed npm tarball into temporary fixture apps, checks Node ESM/CommonJS loading, verifies Temporal SDK `loadDataConverter` behavior for `payloadConverterPath`, verifies a generated protobuf-es schema inventory, runs a Deno npm-import round trip, and verifies Rust binary wire-format compatibility without external services.
+
+The generated schema fixture is generated from `test/e2e/generated-schema/orders.proto` with Buf and `@bufbuild/protoc-gen-es`. Run `just generate-fixtures` after changing fixture protos. `just check` regenerates the fixture and fails if the tracked generated files are stale.
 
 `just test-e2e-temporal-worker` is an explicit live integration gate. It requires an installed Temporal CLI or `TEMPORAL_TEST_SERVER_EXECUTABLE`, starts a local Temporal dev server, then runs a real `@temporalio/client` and `@temporalio/worker` with `dataConverter.payloadConverterPath`. It is intentionally outside `just release-check` because the publish workflow does not provision the Temporal CLI. Use `just verify-integration` when the Temporal CLI is available and you want the full local release check plus the live worker/client fixture.
 

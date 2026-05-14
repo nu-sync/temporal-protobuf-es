@@ -1,0 +1,8 @@
+version: v2
+inputs:
+  - directory: test/e2e/generated-schema
+plugins:
+  - local: protoc-gen-es
+    out: test/e2e/generated-schema
+    opt:
+      - target=js+dts
