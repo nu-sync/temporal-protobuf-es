@@ -59,6 +59,8 @@ The local sibling `sdk-typescript` checkout, when present, contains a protobuf-e
 - `../sdk-typescript/packages/common/src/protobufs-es.ts`
 - `../sdk-typescript/packages/common/src/converter/types.ts`
 - `../sdk-typescript/packages/test/src/test-payload-converter-es.ts`
+- `../sdk-typescript/packages/common/src/internal-non-workflow/data-converter-helpers.ts`
+- `../sdk-typescript/packages/worker/src/workflow/bundler.ts`
 
 Key behavior visible in those references:
 
@@ -68,6 +70,22 @@ Key behavior visible in those references:
 - Message type metadata stores the fully qualified protobuf message name when the schema has a package.
 - The protobuf-es implementation uses `@bufbuild/protobuf` APIs such as `createRegistry`, `isMessage`, `toBinary`, `fromBinary`, `toJson`, and `fromJson`.
 - The Temporal composite converter path should preserve the existing default protobuf ordering: undefined, binary/plain, protobuf JSON, protobuf binary, JSON/plain.
+- `dataConverter.payloadConverterPath` loads a module through `require()` and requires a named `payloadConverter` export.
+
+The local sibling Temporal generator repositories, when present, provide codegen and cross-language wire-format anchors:
+
+- `../protoc-gen-ts-temporal/crates/protoc-gen-ts-temporal/src/render.rs`
+- `../protoc-gen-ts-temporal/examples/minimal/src/data-converter.ts`
+- `../protoc-gen-ts-temporal/examples/minimal/src/client.ts`
+- `../protoc-gen-ts-temporal/examples/minimal/src/worker.ts`
+- `../protoc-gen-rust-temporal/WIRE-FORMAT.md`
+
+Key behavior visible in those references:
+
+- `protoc-gen-ts-temporal` emits `_pb_register.ts` files with `schemas: readonly DescMessage[]`.
+- Example ESM client and worker modules use `createRequire(import.meta.url)` plus `require.resolve(...)` for `payloadConverterPath`.
+- Rust interoperability is a binary protobuf contract: `encoding = "binary/protobuf"`, `messageType = fully qualified proto name`, and `data = raw proto bytes`.
+- `google.protobuf.Empty` should still be represented as a protobuf payload triple when used as an input or output in cross-language generated workflows.
 
 ## Public API
 
@@ -160,6 +178,14 @@ This means the default converter should emit `json/protobuf` for protobuf-es mes
 
 The helper should not hide registry requirements, introduce global mutable state, or auto-discover generated files.
 
+## Implementation Constraints
+
+- Do not import implementation code from sibling local checkouts.
+- Do not import `@temporalio/common/lib/protobufs-es`; this package supplies its own protobuf-es converter implementation.
+- Prefer public exports from `@temporalio/common` for Temporal converter interfaces, default converter pieces, metadata constants, and errors. If a deep import is unavoidable, document it in the code and cover it with packaging tests.
+- Keep the implementation compatible with Workflow bundle constraints. Converter code should not depend on Node-only APIs unless the usage is isolated to examples or fixtures that never run inside the workflow isolate.
+- Preserve fresh metadata byte arrays per payload so callers cannot mutate shared encoding or message type bytes across conversions.
+
 ## Temporal SDK Integration
 
 Applications should create an app-local `payload-converter.ts` file because the package cannot know which generated schemas the application uses.
@@ -182,6 +208,9 @@ Client usage:
 
 ```ts
 import { Client } from '@temporalio/client';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
 
 const client = new Client({
   connection,
@@ -196,6 +225,9 @@ Worker usage:
 
 ```ts
 import { Worker } from '@temporalio/worker';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
 
 const worker = await Worker.create({
   connection,
@@ -209,6 +241,48 @@ const worker = await Worker.create({
 ```
 
 A plugin wrapper may be added after the base converter is stable. The converter should remain the core abstraction; a plugin should only improve wiring ergonomics.
+
+### `payloadConverterPath` Module Contract
+
+Temporal TypeScript SDK `payloadConverterPath` expects the resolved module to have a named `payloadConverter` export with `toPayload` and `fromPayload` methods. Examples and tests should always model that shape:
+
+```ts
+import { makeProtobufEsPayloadConverter } from '@nu-sync/temporal-protobuf-es';
+import { schemas } from './gen/orders_pb_register';
+
+export const payloadConverter = makeProtobufEsPayloadConverter(schemas);
+```
+
+For ESM application code that still needs `require.resolve(...)`, use `createRequire(import.meta.url)` in the app-local client and worker modules.
+
+## Generator Integration
+
+`protoc-gen-ts-temporal` can integrate with this package by emitting app-local schema inventories, not by making this package depend on the generator.
+
+The generator's `_pb_register.ts` pattern should remain compatible:
+
+```ts
+import type { DescMessage } from '@bufbuild/protobuf';
+import { RunRequestSchema, RunResultSchema } from './orders_pb';
+
+export const schemas: readonly DescMessage[] = [
+  RunRequestSchema,
+  RunResultSchema,
+];
+```
+
+Applications can combine one or more generated schema arrays into the package helper:
+
+```ts
+import { makeProtobufEsPayloadConverter } from '@nu-sync/temporal-protobuf-es';
+import { schemas as orderSchemas } from './gen/orders_pb_register';
+import { schemas as customerSchemas } from './gen/customers_pb_register';
+
+export const payloadConverter = makeProtobufEsPayloadConverter([
+  ...orderSchemas,
+  ...customerSchemas,
+]);
+```
 
 ## Dependencies
 
@@ -242,6 +316,17 @@ The wire format should match Temporal protobuf conventions:
 - binary payload bytes are compatible with the same message encoded by other protobuf runtimes
 - proto3 JSON payloads follow canonical protobuf JSON behavior as implemented by `@bufbuild/protobuf`
 
+## Wire Format Modes
+
+There are two related but distinct behaviors:
+
+- Default Temporal TypeScript ergonomics: `DefaultPayloadConverterWithProtobufsEs` should emit `json/protobuf` for protobuf-es messages because protobuf JSON appears before protobuf binary in the default composite converter order.
+- Cross-language generated-client interoperability: Rust and Go compatibility should use binary protobuf payloads with `encoding = "binary/protobuf"`, `messageType = fully qualified proto message name`, and `data = raw proto wire bytes`.
+
+The package should make both behaviors explicit. Documentation should recommend the default composite converter for ordinary TypeScript app ergonomics and direct binary converter composition for generated clients or cross-language workflows that require the binary contract.
+
+`google.protobuf.Empty` needs an explicit decision before release. Rust generator compatibility treats Empty as a normal protobuf payload triple with `messageType = "google.protobuf.Empty"` and empty `data`; this package should either include `EmptySchema` automatically in helper-created registries or document that applications and generated schema inventories must register it manually.
+
 ## Package Layout
 
 The initial implementation should keep the package small:
@@ -265,6 +350,17 @@ Expected exports from `src/index.ts`:
 
 Internal implementation details should remain in `src/protobuf-es-payload-converters.ts` unless the package grows enough to justify additional files.
 
+## Tooling Direction
+
+The package skeleton should target:
+
+- Node.js `>=20`
+- TypeScript `>=5.5`
+- ESM-first package exports
+- npm-compatible installation and packing
+
+The implementation milestone should choose a package manager deliberately and record that choice in `package.json` and `justfile`. The likely default is pnpm for the library package because the Temporal TypeScript SDK uses pnpm-style package workflows. Bun may still be useful for runnable fixture examples when it materially simplifies generated TypeScript execution.
+
 ## Test Plan
 
 ### Unit Tests
@@ -281,6 +377,7 @@ Unit tests should verify:
 - `google.protobuf.Any` works when the registry contains embedded message schemas
 - plain objects with `$typeName` are handled intentionally and documented
 - payload metadata byte arrays are fresh and not shared across conversions
+- `google.protobuf.Empty` behavior is covered once the Empty registration decision is made
 
 ### npm Compatibility Tests
 
@@ -290,6 +387,7 @@ Create a minimal npm-installed fixture application that:
 - installs `@bufbuild/protobuf` and Temporal SDK packages through npm-compatible package managers
 - uses both ESM imports and the `payloadConverterPath` pattern expected by Temporal workers
 - verifies `require.resolve('./payload-converter')` works where the SDK needs it
+- verifies the app-local converter module has a named `payloadConverter` export
 - starts a TypeScript client and worker using the converter
 - passes a generated protobuf-es message as workflow input and receives a generated message result
 
@@ -321,6 +419,8 @@ Create a cross-language fixture that:
 
 This should cover both binary protobuf and proto3 JSON payloads where practical. Binary compatibility is the most important baseline.
 
+The Rust fixture must include `google.protobuf.Empty` if the package claims generated workflow compatibility for Empty inputs or outputs.
+
 ### Temporal Integration Tests
 
 Run an end-to-end test with:
@@ -351,6 +451,7 @@ Before the first public release:
 - peer dependency ranges are explicit
 - package metadata marks the package as community-maintained and not official Temporal SDK code
 - npm provenance, license, repository URL, and files list are configured deliberately
+- direct binary converter documentation clearly distinguishes binary interop from default composite JSON behavior
 
 ## Implementation Milestones
 
@@ -374,3 +475,4 @@ Before the first public release:
 - Should `protoc-gen-ts-temporal` generate the app-local `payload-converter.ts` file automatically?
 - Should JSON protobuf compatibility be considered a required cross-language guarantee, or should binary protobuf be the primary supported path?
 - Should the helper expose a binary-first option, or should binary-first behavior require explicit manual composition?
+- Should helper-created registries include `google.protobuf.Empty` automatically, or should generated schema inventories include `EmptySchema` whenever Empty appears in service inputs or outputs?

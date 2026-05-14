@@ -25,6 +25,8 @@ Use this skill for implementation work in this repo.
 - Preserve encoding labels: `binary/protobuf` and `json/protobuf`.
 - Keep registry input explicit: accept a `Registry` or an array of generated `DescMessage` schemas.
 - Keep runtime dependencies narrow and document every peer dependency.
+- Do not import `@temporalio/common/lib/protobufs-es`; this package owns its converter implementation.
+- Keep app-local `payloadConverterPath` examples shaped around a named `payloadConverter` export.
 - Avoid package publishing, registry changes, or credential use unless the user explicitly asks.
 
 ## Validation

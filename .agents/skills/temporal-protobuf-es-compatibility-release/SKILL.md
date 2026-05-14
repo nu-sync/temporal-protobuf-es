@@ -22,6 +22,7 @@ Use this skill for compatibility and release-readiness work in this repo.
 - Treat Rust and Go interoperability as a binary protobuf wire-format contract first.
 - Treat Temporal TypeScript default converter ergonomics as a separate JSON-first composite behavior.
 - Verify app-local converter modules export a named `payloadConverter`.
+- Decide and test how `google.protobuf.Empty` schemas are registered before release.
 - Verify package examples are copied from fixtures that actually run.
 - Keep publishing as a manual release action; do not publish from Codex unless explicitly directed.
 

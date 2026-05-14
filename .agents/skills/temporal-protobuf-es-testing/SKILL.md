@@ -33,6 +33,8 @@ Use this skill for test planning and validation work in this repo.
 - plain objects containing `$typeName`
 - fresh payload metadata bytes per conversion
 - app-local `payload-converter.ts` usage through `payloadConverterPath`
+- named `payloadConverter` export validation
+- `google.protobuf.Empty` behavior once the release decision is made
 
 ## Validation
 
