@@ -41,6 +41,9 @@ test-e2e-npm: build
 test-e2e-sdk-loader: build
     node --test test/e2e/sdk-loader-fixture.test.mjs
 
+test-e2e-generated-schema:
+    @just _run-package-script test:e2e:generated-schema
+
 test-e2e-deno: build
     node --test test/e2e/deno-packed-fixture.test.mjs
 

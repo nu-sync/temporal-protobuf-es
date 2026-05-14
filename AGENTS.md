@@ -47,6 +47,7 @@ Codex project instructions follow the documented repo-level `AGENTS.md` discover
 - `just lint`: lint package source.
 - `just typecheck`: typecheck package source.
 - `just test`: run package tests.
+- `just test-e2e-generated-schema`: run the packed-package generated schema inventory fixture.
 - `just test-e2e-temporal-worker`: run the explicit live Temporal worker/client fixture; requires the Temporal CLI or `TEMPORAL_TEST_SERVER_EXECUTABLE`.
 - `just build`: build the package.
 - `just pack`: dry-run npm package packing.

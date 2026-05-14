@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package temporal.protobufes.fixture;
+
+message StartOrderRequest {
+  string order_id = 1;
+  int32 quantity = 2;
+  repeated string tags = 3;
+}
+
+message StartOrderResult {
+  string order_id = 1;
+  bool accepted = 2;
+}

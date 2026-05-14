@@ -499,6 +499,10 @@ without production infrastructure:
   `loadDataConverter({ payloadConverterPath })` against the packed package to
   verify the actual Temporal SDK loader accepts the app-local named
   `payloadConverter` export and rejects missing or invalid exports.
+- The generated schema fixture copies a tracked `orders.proto`, a generated
+  protobuf-es-style `orders_pb.mjs`, and an `_pb_register`-style schema
+  inventory into a temporary app, then verifies the packed package accepts that
+  inventory for binary and JSON protobuf payloads.
 - The Deno fixture uses the same packed package and local peer dependency
   install, then runs `deno run --node-modules-dir=manual` to verify converter
   construction and binary/JSON protobuf round trips.
@@ -530,6 +534,7 @@ The first public release met these criteria; future releases should keep them tr
 - the npm package installs cleanly from `npm pack`
 - the package exports work in at least one ESM Node fixture
 - the package CommonJS export works with `require()`
+- a generated protobuf-es schema inventory fixture works from the packed package
 - the Temporal `payloadConverterPath` fixture works
 - the Deno converter fixture passes
 - the Rust binary payload compatibility fixture passes
@@ -550,7 +555,7 @@ The first public release met these criteria; future releases should keep them tr
 3. Converter implementation
    - binary, JSON, default composite, and helper APIs pass focused unit tests.
 4. Fixture validation
-   - npm-installed fixture and Temporal `payloadConverterPath` fixture pass.
+   - npm-installed fixture, generated schema inventory fixture, and Temporal `payloadConverterPath` fixture pass.
 5. Cross-runtime validation
    - Deno converter fixture and Rust binary compatibility fixture pass or have documented constraints.
 6. Release readiness
