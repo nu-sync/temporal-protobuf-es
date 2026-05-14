@@ -11,6 +11,8 @@ check-docs:
     test -s justfile
     grep -q '^# temporal-protobuf-es' SPEC.md
     grep -q '^# AGENTS.md' AGENTS.md
+    grep -q '^## Release Criteria' SPEC.md
+    grep -q '^## Test Plan' SPEC.md
 
 check-skills:
     @if [ -d .agents/skills ]; then \
@@ -33,3 +35,22 @@ status:
 
 diff:
     git diff -- SPEC.md AGENTS.md justfile .agents/skills
+
+spec:
+    sed -n '1,260p' SPEC.md
+
+context:
+    sed -n '1,220p' AGENTS.md
+
+sdk-protobuf-es-reference:
+    @for path in \
+      ../sdk-typescript/packages/common/src/converter/protobuf-es-payload-converters.ts \
+      ../sdk-typescript/packages/common/src/protobufs-es.ts \
+      ../sdk-typescript/packages/common/src/converter/types.ts \
+      ../sdk-typescript/packages/test/src/test-payload-converter-es.ts; do \
+        if [ -f "$path" ]; then \
+          echo "$path"; \
+        else \
+          echo "missing: $path"; \
+        fi; \
+      done

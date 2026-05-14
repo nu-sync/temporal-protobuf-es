@@ -29,6 +29,7 @@ Codex project instructions follow the documented repo-level `AGENTS.md` discover
 - The repo began as a spec-first project with `SPEC.md` as the only tracked source artifact.
 - Git was initialized locally so milestone commits can be recorded.
 - The initial implementation target is a TypeScript package that integrates Temporal payload conversion with `@bufbuild/protobuf` generated schemas.
+- `SPEC.md` treats the sibling `../sdk-typescript` protobuf-es converter implementation and tests as behavior references when that checkout is present.
 
 ## Commands
 
@@ -36,4 +37,7 @@ Codex project instructions follow the documented repo-level `AGENTS.md` discover
 - `just check`: run all currently available repository checks.
 - `just check-docs`: verify required documentation files exist and contain expected headings.
 - `just check-skills`: verify repo-local skill files have required frontmatter when skills exist.
+- `just spec`: print the current specification.
+- `just context`: print repo instructions.
+- `just sdk-protobuf-es-reference`: list local sibling SDK reference files when present.
 - `just status`: show concise git status.
