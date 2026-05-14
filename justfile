@@ -42,6 +42,17 @@ spec:
 context:
     sed -n '1,220p' AGENTS.md
 
+skills:
+    @if [ -d .agents/skills ]; then \
+      for skill in .agents/skills/*/SKILL.md(N); do \
+        echo "$skill"; \
+        sed -n '1,8p' "$skill" | grep -E '^(name|description):'; \
+        echo; \
+      done; \
+    else \
+      echo "No .agents/skills directory yet"; \
+    fi
+
 sdk-protobuf-es-reference:
     @for path in \
       ../sdk-typescript/packages/common/src/converter/protobuf-es-payload-converters.ts \
