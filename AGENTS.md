@@ -50,7 +50,7 @@ Codex project instructions follow the documented repo-level `AGENTS.md` discover
 - `just test-e2e-temporal-worker`: run the explicit live Temporal worker/client fixture; requires the Temporal CLI or `TEMPORAL_TEST_SERVER_EXECUTABLE`.
 - `just build`: build the package.
 - `just pack`: dry-run npm package packing.
-- `just release-check`: run the full local pre-release lifecycle.
+- `just release-check`: run the full local release-check lifecycle.
 
 Publishing is handled by `.github/workflows/publish.yml` when a GitHub release is published with a tag that matches `package.json`.
 

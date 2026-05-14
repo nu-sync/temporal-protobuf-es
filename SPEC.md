@@ -2,7 +2,7 @@
 
 ## Status
 
-This repository now has a working package prototype. The first deliverable was a durable implementation specification, repo guidance, repo-local Codex skills, and repeatable commands. The current package provides protobuf-es payload converters, dual ESM/CommonJS package output, TypeScript build configuration, and focused unit tests.
+This repository now has a working published package. The first deliverable was a durable implementation specification, repo guidance, repo-local Codex skills, and repeatable commands. The current package provides protobuf-es payload converters, dual ESM/CommonJS package output, TypeScript build configuration, and focused unit and fixture tests.
 
 Current observed starting point:
 
@@ -87,7 +87,7 @@ Key behavior visible in those references:
 - `protoc-gen-ts-temporal` emits `_pb_register.ts` files with `schemas: readonly DescMessage[]`.
 - Example ESM client and worker modules use `createRequire(import.meta.url)` plus `require.resolve(...)` for `payloadConverterPath`.
 - Rust interoperability is a binary protobuf contract: `encoding = "binary/protobuf"`, `messageType = fully qualified proto name`, and `data = raw proto bytes`.
-- `google.protobuf.Empty` should still be represented as a protobuf payload triple when used as an input or output in cross-language generated workflows.
+- `google.protobuf.Empty` is represented as a protobuf payload triple when used as an input or output in cross-language generated workflows, and applications or generated schema inventories must explicitly register `EmptySchema`.
 
 ## Public API
 
@@ -366,7 +366,7 @@ There are two related but distinct behaviors:
 
 The package should make both behaviors explicit. Documentation should recommend binary encoding for generated clients or cross-language workflows that require the binary contract, and JSON encoding for TypeScript-only applications that prefer readable proto3 JSON payloads.
 
-`google.protobuf.Empty` needs an explicit decision before release. Rust generator compatibility treats Empty as a normal protobuf payload triple with `messageType = "google.protobuf.Empty"` and empty `data`; this package should either include `EmptySchema` automatically in helper-created registries or document that applications and generated schema inventories must register it manually.
+`google.protobuf.Empty` is not auto-registered by helper-created registries. Rust generator compatibility treats Empty as a normal protobuf payload triple with `messageType = "google.protobuf.Empty"` and empty `data`, so applications and generated schema inventories must include `EmptySchema` whenever Empty appears in service inputs or outputs.
 
 ## Package Layout
 
@@ -422,7 +422,7 @@ Unit tests should verify:
 - `google.protobuf.Any` works when the registry contains embedded message schemas
 - plain objects with `$typeName` are handled intentionally and documented
 - payload metadata byte arrays are fresh and not shared across conversions
-- `google.protobuf.Empty` behavior is covered once the Empty registration decision is made
+- explicit `google.protobuf.Empty` registration behavior is covered, including failure when `EmptySchema` is missing and binary payload triples when it is present
 
 ### npm Compatibility Tests
 
@@ -494,7 +494,7 @@ without production infrastructure:
   from `npm pack`, installs peer dependencies from local `node_modules`, and
   verifies ESM import, CommonJS `require()`, named `payloadConverter` export,
   `require.resolve("./payload-converter.cjs")`, binary/default mode, JSON mode,
-  and `google.protobuf.Empty` payload triples.
+  and explicitly registered `google.protobuf.Empty` payload triples.
 - The SDK loader fixture uses `@temporalio/common/lib/internal-non-workflow`
   `loadDataConverter({ payloadConverterPath })` against the packed package to
   verify the actual Temporal SDK loader accepts the app-local named
@@ -525,7 +525,7 @@ the normal release check plus the live worker/client fixture.
 
 ## Release Criteria
 
-Before the first public release:
+The first public release met these criteria; future releases should keep them true:
 
 - the npm package installs cleanly from `npm pack`
 - the package exports work in at least one ESM Node fixture
@@ -561,4 +561,3 @@ Before the first public release:
 - Should the package ship a Temporal `SimplePlugin` wrapper, a custom plugin class, or only converter helpers for the first release?
 - Should `protoc-gen-ts-temporal` generate the app-local `payload-converter.ts` file automatically?
 - Should JSON protobuf compatibility be considered a required cross-language guarantee, or should binary protobuf be the primary supported path?
-- Should helper-created registries include `google.protobuf.Empty` automatically, or should generated schema inventories include `EmptySchema` whenever Empty appears in service inputs or outputs?

@@ -5,6 +5,7 @@ import { test } from "node:test";
 import { create, createRegistry } from "@bufbuild/protobuf";
 import {
   AnySchema,
+  EmptySchema,
   TimestampSchema,
   anyPack,
   anyUnpack,
@@ -184,6 +185,35 @@ test("registry-only helper input defaults to binary encoding", () => {
     decodeMetadata(payload, METADATA_ENCODING_KEY),
     "binary/protobuf",
   );
+});
+
+test("google.protobuf.Empty is encoded when EmptySchema is explicitly registered", () => {
+  const empty = create(EmptySchema);
+  const withoutEmptySchema = createProtobufEsPayloadConverter([
+    TimestampSchema,
+  ]);
+
+  assert.throws(() => withoutEmptySchema.toPayload(empty), {
+    name: PayloadConverterError.name,
+    message: /google\.protobuf\.Empty/,
+  });
+
+  const converter = createProtobufEsPayloadConverter([
+    TimestampSchema,
+    EmptySchema,
+  ]);
+  const payload = converter.toPayload(empty);
+
+  assert.equal(
+    decodeMetadata(payload, METADATA_ENCODING_KEY),
+    "binary/protobuf",
+  );
+  assert.equal(
+    decodeMetadata(payload, METADATA_MESSAGE_TYPE_KEY),
+    "google.protobuf.Empty",
+  );
+  assert.equal(payload.data.length, 0);
+  assert.deepEqual(converter.fromPayload(payload), empty);
 });
 
 test("json helper encodes json protobuf and still decodes binary protobuf", () => {

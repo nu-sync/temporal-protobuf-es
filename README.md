@@ -19,6 +19,8 @@ export const payloadConverter = createProtobufEsPayloadConverter({
 
 The helper defaults to binary protobuf encoding for cross-language Temporal payload compatibility. Use `encoding: "json"` or `createJsonProtobufEsPayloadConverter(...)` for TypeScript-only applications that prefer proto3 JSON payloads. The package also keeps `make*` helper aliases for callers that prefer that naming style.
 
+Schema registration is explicit, including well-known types. If a workflow input or output uses `google.protobuf.Empty`, import `EmptySchema` from `@bufbuild/protobuf/wkt` and include it in the `schemas` array or generated schema inventory.
+
 `payloadConverterPath` modules must export a named `payloadConverter`, as shown above. The package ships both ESM and CommonJS entrypoints so Temporal's synchronous `require(...)` loader can load app-local converter modules.
 
 ## Validation
