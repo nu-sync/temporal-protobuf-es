@@ -24,7 +24,7 @@ check-skills:
       found=0; \
       for skill in .agents/skills/*/SKILL.md(N); do \
         found=1; \
-        grep -q '^---$$' "$skill"; \
+        test "$(grep -c '^---$' "$skill")" -ge 2; \
         grep -q '^name:' "$skill"; \
         grep -q '^description:' "$skill"; \
       done; \
