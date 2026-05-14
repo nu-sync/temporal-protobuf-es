@@ -40,7 +40,7 @@ The e2e suite installs the packed npm tarball into temporary fixture apps, check
 
 ## Release
 
-The official npm publish path is GitHub Actions. Create and publish a GitHub release whose tag matches `package.json`, such as `v0.0.1`; `.github/workflows/publish.yml` installs dependencies, runs `npm run release-check`, and publishes `@nu-sync/temporal-protobuf-es` to npm.
+The official npm publish path is GitHub Actions. Create and publish a GitHub release whose tag matches `package.json`, such as `v0.0.1`; `.github/workflows/publish.yml` installs Node and Deno, runs `npm run release-check`, uploads the validated tarball, and publishes `@nu-sync/temporal-protobuf-es` to npm from that tarball.
 
 For the first publish, use a temporary npm automation token stored as the repository secret `NPM_TOKEN`; the workflow publishes with `npm publish --access public --provenance`. After the package exists on npm, configure npm trusted publishing for GitHub Actions with:
 

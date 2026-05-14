@@ -6,19 +6,16 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: publish-${{ github.event.release.tag_name }}
   cancel-in-progress: false
 
 jobs:
-  npm:
-    name: Publish to npm
+  validate:
+    name: Validate release package
     runs-on: ubuntu-latest
     if: ${{ !github.event.release.prerelease }}
-    env:
-      NPM_TOKEN_PRESENT: ${{ secrets.NPM_TOKEN != '' }}
     steps:
       - name: Check out release tag
         uses: actions/checkout@v6
@@ -29,6 +26,11 @@ jobs:
           node-version: "24.x"
           registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
 
       - name: Verify tag matches package version
         run: |
@@ -46,12 +48,50 @@ jobs:
       - name: Run release checks
         run: npm run release-check
 
+      - name: Pack release tarball
+        id: pack
+        run: |
+          npm pack --json > pack.json
+          tarball="$(node -p "JSON.parse(require('node:fs').readFileSync('pack.json', 'utf8'))[0].filename")"
+          echo "tarball=$tarball" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release tarball
+        uses: actions/upload-artifact@v6
+        with:
+          name: npm-package
+          path: ${{ steps.pack.outputs.tarball }}
+          if-no-files-found: error
+
+  npm:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    needs: validate
+    if: ${{ !github.event.release.prerelease }}
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      NPM_TOKEN_PRESENT: ${{ secrets.NPM_TOKEN != '' }}
+    steps:
+      - name: Download release tarball
+        uses: actions/download-artifact@v6
+        with:
+          name: npm-package
+          path: package
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.x"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
       - name: Publish with npm trusted publishing
         if: ${{ env.NPM_TOKEN_PRESENT == 'false' }}
-        run: npm publish --access public
+        run: npm publish package/*.tgz --access public
 
       - name: Publish with temporary token and provenance
         if: ${{ env.NPM_TOKEN_PRESENT == 'true' }}
-        run: npm publish --access public --provenance
+        run: npm publish package/*.tgz --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
