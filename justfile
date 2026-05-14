@@ -12,23 +12,27 @@ check: _check-docs _check-skills
 verify: check
     @echo "spec-phase verification complete"
 
-format: _package-scaffold-required
-    pnpm format
+format:
+    @just _run-package-script format
 
-lint: _package-scaffold-required
-    pnpm lint
+lint:
+    @just _run-package-script lint
 
-typecheck: _package-scaffold-required
-    pnpm typecheck
+typecheck:
+    @just _run-package-script typecheck
 
-test: _package-scaffold-required
-    pnpm test
+test:
+    @just _run-package-script test
 
-build: _package-scaffold-required
-    pnpm build
+build:
+    @just _run-package-script build
 
-pack: _package-scaffold-required
-    npm pack --dry-run
+pack:
+    @if [ -f package.json ]; then \
+      npm pack --dry-run; \
+    else \
+      echo "Package scaffold not present yet; nothing to pack."; \
+    fi
 
 release-check: check format lint typecheck test build pack
 
@@ -62,5 +66,9 @@ _check-skills:
     fi
 
 [private]
-_package-scaffold-required:
-    @test -f package.json || (echo "Package scaffold not present yet. Complete the package skeleton milestone first." >&2; exit 1)
+_run-package-script script:
+    @if [ ! -f package.json ]; then \
+      echo "Package scaffold not present yet; nothing to run for '{{script}}'."; \
+    else \
+      pnpm run {{script}}; \
+    fi

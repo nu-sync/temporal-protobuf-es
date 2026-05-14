@@ -40,12 +40,12 @@ Codex project instructions follow the documented repo-level `AGENTS.md` discover
 - `just status`: show concise git status.
 - `just check`: run all currently available repository checks.
 - `just verify`: run the current phase's broad verification target.
-- `just format`: format package source once the package scaffold exists.
-- `just lint`: lint package source once the package scaffold exists.
-- `just typecheck`: typecheck package source once the package scaffold exists.
-- `just test`: run package tests once the package scaffold exists.
-- `just build`: build the package once the package scaffold exists.
-- `just pack`: dry-run npm package packing once the package scaffold exists.
+- `just format`: format package source when present.
+- `just lint`: lint package source when present.
+- `just typecheck`: typecheck package source when present.
+- `just test`: run package tests when present.
+- `just build`: build the package when present.
+- `just pack`: dry-run npm package packing when present.
 - `just release-check`: run the full local pre-release lifecycle.
 
-Package lifecycle recipes are intentionally guarded on `package.json` during the spec-first phase. Once the package scaffold exists, keep these recipes wired to the package manager and scripts chosen by that milestone.
+Package lifecycle recipes are phase-aware during the spec-first phase: they succeed with a clear no-op message when `package.json` is absent. Once the package scaffold exists, keep these recipes wired to the package manager and scripts chosen by that milestone.

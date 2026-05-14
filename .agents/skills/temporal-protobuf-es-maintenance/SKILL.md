@@ -20,6 +20,7 @@ Use this skill for keeping the repo's durable context accurate.
 - Keep `AGENTS.md` limited to stable project context, commands, and working conventions.
 - Keep `justfile` focused on maintenance and developer lifecycle commands.
 - Avoid read-only wrapper recipes for files that are easy to open directly.
+- Public `just` recipes should succeed in the current repository phase; use clear no-op messages for lifecycle steps that are not applicable yet.
 - Keep skill descriptions concise and trigger-focused.
 - Prefer repo-relative paths over machine-specific absolute paths.
 - Do not commit generated runtime state, package tarballs, dependency folders, logs, or secrets.
