@@ -9,7 +9,7 @@ The current repository phase is specification and project scaffolding. Keep impl
 ## Source Of Truth
 
 - `SPEC.md` is the product and implementation specification.
-- `justfile` is the command index for repeatable local checks and future development tasks.
+- `justfile` is the command index for repeatable local checks and common repo inspection.
 - `.agents/skills/*/SKILL.md` contains repo-local Codex workflows for development, testing, maintenance, compatibility, and release work.
 
 Codex project instructions follow the documented repo-level `AGENTS.md` discovery model. Repo-local skills follow the documented `.agents/skills` discovery location and `SKILL.md` frontmatter format.
@@ -19,7 +19,7 @@ Codex project instructions follow the documented repo-level `AGENTS.md` discover
 - Read `SPEC.md` before making project-shaping changes.
 - Keep changes incremental and milestone-sized.
 - Update `AGENTS.md` when stable repo context, conventions, or commands change.
-- Update `justfile` when a command becomes relevant to development, testing, packaging, or release work.
+- Add `justfile` recipes only when they are useful for the current repository phase.
 - Run `just check` before each milestone commit once the command exists.
 - Commit each completed milestone with a focused message.
 - Do not publish packages, change external registries, or introduce credentials without explicit user direction.
@@ -38,15 +38,11 @@ Codex project instructions follow the documented repo-level `AGENTS.md` discover
 
 - `just --list`: show available recipes.
 - `just check`: run all currently available repository checks.
-- `just check-docs`: verify required documentation files exist and contain expected headings.
-- `just check-skills`: verify repo-local skill files have required frontmatter when skills exist.
 - `just verify`: run the current phase's broad verification target.
-- `just planned-commands`: list future implementation and release commands tracked in this command file.
 - `just spec`: print the current specification.
 - `just context`: print repo instructions.
 - `just skills`: list repo-local skill names and descriptions.
-- `just sdk-protobuf-es-reference`: list local sibling SDK reference files when present.
-- `just temporal-generator-reference`: list local sibling generator and wire-format reference files when present.
 - `just status`: show concise git status.
+- `just diff`: show documentation and repo-local skill changes.
 
-Implementation and release recipes are already named in `justfile` but intentionally guard on `package.json` until the package skeleton milestone exists. They currently assume pnpm for package scripts and should be updated if the implementation milestone chooses a different package manager.
+Implementation, test, fixture, packaging, and release recipes should be added when the corresponding files or workflows exist. Do not predeclare guarded recipes for future milestones.
