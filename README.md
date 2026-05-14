@@ -50,3 +50,5 @@ For the first publish, use a temporary npm automation token stored as the reposi
 - Workflow filename: `publish.yml`
 
 Then remove `NPM_TOKEN`. Future releases publish through OIDC trusted publishing without a long-lived npm token, and npm generates provenance automatically.
+
+If the GitHub release workflow fails before publishing to npm, fix the workflow, ensure the release tag points at the corrected commit, and manually dispatch `publish.yml` with the same tag.
