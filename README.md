@@ -32,11 +32,12 @@ just test-e2e-deno
 just test-e2e-rust
 just test-e2e-temporal-worker
 just verify
+just verify-integration
 ```
 
 The e2e suite installs the packed npm tarball into temporary fixture apps, checks Node ESM/CommonJS loading, verifies Temporal SDK `loadDataConverter` behavior for `payloadConverterPath`, runs a Deno npm-import round trip, and verifies Rust binary wire-format compatibility without external services.
 
-`just test-e2e-temporal-worker` is an opt-in prototype that starts a local Temporal dev server through the Temporal CLI, then runs a real `@temporalio/client` and `@temporalio/worker` with `dataConverter.payloadConverterPath`.
+`just test-e2e-temporal-worker` is an explicit live integration gate. It requires an installed Temporal CLI or `TEMPORAL_TEST_SERVER_EXECUTABLE`, starts a local Temporal dev server, then runs a real `@temporalio/client` and `@temporalio/worker` with `dataConverter.payloadConverterPath`. It is intentionally outside `just release-check` because the publish workflow does not provision the Temporal CLI. Use `just verify-integration` when the Temporal CLI is available and you want the full local release check plus the live worker/client fixture.
 
 ## Release
 

@@ -42,10 +42,12 @@ Codex project instructions follow the documented repo-level `AGENTS.md` discover
 - `just status`: show concise git status.
 - `just check`: run all currently available repository checks.
 - `just verify`: run broad local verification.
+- `just verify-integration`: run `just release-check` plus the live Temporal worker/client fixture; requires the Temporal CLI.
 - `just format`: check package formatting.
 - `just lint`: lint package source.
 - `just typecheck`: typecheck package source.
 - `just test`: run package tests.
+- `just test-e2e-temporal-worker`: run the explicit live Temporal worker/client fixture; requires the Temporal CLI or `TEMPORAL_TEST_SERVER_EXECUTABLE`.
 - `just build`: build the package.
 - `just pack`: dry-run npm package packing.
 - `just release-check`: run the full local pre-release lifecycle.

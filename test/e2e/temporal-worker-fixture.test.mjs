@@ -11,19 +11,12 @@ import { TestWorkflowEnvironment } from "@temporalio/testing";
 import { Worker } from "@temporalio/worker";
 
 const require = createRequire(import.meta.url);
-const temporalExecutable = findTemporalExecutable();
 
 test(
-  "Temporal Worker and Client prototype round-trip protobuf-es payloads through payloadConverterPath",
+  "Temporal Worker and Client fixture round-trips protobuf-es payloads through payloadConverterPath",
   { timeout: 120_000 },
-  async (t) => {
-    if (temporalExecutable === undefined) {
-      t.skip(
-        "Temporal CLI not found; set TEMPORAL_TEST_SERVER_EXECUTABLE to run this prototype",
-      );
-      return;
-    }
-
+  async () => {
+    const temporalExecutable = requireTemporalExecutable();
     const dataConverter = {
       payloadConverterPath:
         require.resolve("./temporal-worker/payload-converter.cjs"),
@@ -92,6 +85,17 @@ test(
     }
   },
 );
+
+function requireTemporalExecutable() {
+  const temporalExecutable = findTemporalExecutable();
+  if (temporalExecutable !== undefined) {
+    return temporalExecutable;
+  }
+
+  throw new Error(
+    "Temporal CLI not found; install `temporal` or set TEMPORAL_TEST_SERVER_EXECUTABLE to run this integration fixture",
+  );
+}
 
 function findTemporalExecutable() {
   if (process.env.TEMPORAL_TEST_SERVER_EXECUTABLE) {

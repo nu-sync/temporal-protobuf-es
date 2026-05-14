@@ -13,6 +13,9 @@ check: _check-docs _check-skills
 verify:
     @just _run-package-script verify
 
+verify-integration:
+    @just _run-package-script verify:integration
+
 format:
     @just _run-package-script format
 
@@ -44,8 +47,8 @@ test-e2e-deno: build
 test-e2e-rust: build
     node --test test/e2e/rust-wire-format.test.mjs
 
-test-e2e-temporal-worker: build
-    node --test test/e2e/temporal-worker-prototype.test.mjs
+test-e2e-temporal-worker:
+    @just _run-package-script test:e2e:temporal-worker
 
 build:
     @just _run-package-script build

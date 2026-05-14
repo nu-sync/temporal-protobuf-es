@@ -32,9 +32,11 @@
     "release-check": "npm run verify && npm run format && npm run pack",
     "test": "npm run test:unit && npm run test:e2e",
     "test:e2e": "npm run build && node --test test/e2e/npm-packed-fixture.test.mjs && node --test test/e2e/sdk-loader-fixture.test.mjs && node --test test/e2e/deno-packed-fixture.test.mjs && node --test test/e2e/rust-wire-format.test.mjs",
+    "test:e2e:temporal-worker": "npm run build && node --test test/e2e/temporal-worker-fixture.test.mjs",
     "test:unit": "npm run build && node --test \"test/unit/**/*.test.mjs\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "verify": "npm run check && npm run lint && npm run test && npm run build"
+    "verify": "npm run check && npm run lint && npm run test && npm run build",
+    "verify:integration": "npm run release-check && npm run test:e2e:temporal-worker"
   },
   "repository": {
     "type": "git",

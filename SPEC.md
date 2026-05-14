@@ -514,12 +514,14 @@ downloads. Until those dependencies are introduced deliberately, the local suite
 validates the `payloadConverterPath` module contract through the same
 `loadDataConverter` helper used by Temporal SDK client and worker setup.
 
-An opt-in `just test-e2e-temporal-worker` prototype exists for the live
-TypeScript SDK path. It starts a local Temporal dev server through an installed
-Temporal CLI, then runs `@temporalio/client` and `@temporalio/worker` with
-`dataConverter.payloadConverterPath`. This recipe is intentionally excluded
-from `just test-e2e` and `just release-check` until the Temporal CLI dependency
-and runtime cost are accepted as stable release-check requirements.
+`just test-e2e-temporal-worker` is the explicit live TypeScript SDK integration
+gate. It requires an installed Temporal CLI or `TEMPORAL_TEST_SERVER_EXECUTABLE`,
+starts a local Temporal dev server, then runs `@temporalio/client` and
+`@temporalio/worker` with `dataConverter.payloadConverterPath`. This recipe is
+intentionally excluded from `just test-e2e` and `just release-check` because the
+publish workflow does not provision the Temporal CLI. Maintainers can run
+`just verify-integration` when the Temporal CLI is available; that command runs
+the normal release check plus the live worker/client fixture.
 
 ## Release Criteria
 
@@ -537,6 +539,7 @@ Before the first public release:
 - npm provenance, license, repository URL, and files list are configured deliberately
 - the GitHub Actions npm publish workflow runs `npm run release-check` before `npm publish`
 - documentation clearly distinguishes binary interop from explicit JSON protobuf mode
+- `just test-e2e-temporal-worker` remains a strict live integration gate that fails when the Temporal CLI is unavailable; it is manual unless CI explicitly provisions that dependency
 
 ## Implementation Milestones
 
