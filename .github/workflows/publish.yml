@@ -98,10 +98,16 @@ jobs:
 
       - name: Publish with npm trusted publishing
         if: ${{ env.NPM_TOKEN_PRESENT == 'false' }}
-        run: npm publish package/*.tgz --access public
+        run: |
+          tarball="$(find package -type f -name '*.tgz' -print -quit)"
+          test -n "$tarball" || { find package -maxdepth 3 -type f -print; exit 1; }
+          npm publish "$tarball" --access public
 
       - name: Publish with temporary token and provenance
         if: ${{ env.NPM_TOKEN_PRESENT == 'true' }}
-        run: npm publish package/*.tgz --access public --provenance
+        run: |
+          tarball="$(find package -type f -name '*.tgz' -print -quit)"
+          test -n "$tarball" || { find package -maxdepth 3 -type f -print; exit 1; }
+          npm publish "$tarball" --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
