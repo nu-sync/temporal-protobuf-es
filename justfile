@@ -9,8 +9,8 @@ status:
 
 check: _check-docs _check-skills
 
-verify: check
-    @echo "spec-phase verification complete"
+verify: check lint test build
+    @echo "verification complete"
 
 format:
     @just _run-package-script format
@@ -28,13 +28,9 @@ build:
     @just _run-package-script build
 
 pack:
-    @if [ -f package.json ]; then \
-      npm pack --dry-run; \
-    else \
-      echo "Package scaffold not present yet; nothing to pack."; \
-    fi
+    npm pack --dry-run
 
-release-check: check format lint typecheck test build pack
+release-check: verify format pack
 
 [private]
 _check-docs:
@@ -67,8 +63,4 @@ _check-skills:
 
 [private]
 _run-package-script script:
-    @if [ ! -f package.json ]; then \
-      echo "Package scaffold not present yet; nothing to run for '{{script}}'."; \
-    else \
-      pnpm run {{script}}; \
-    fi
+    npm run {{script}}

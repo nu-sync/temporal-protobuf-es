@@ -2,7 +2,7 @@
 
 ## Status
 
-This repository is in the spec-first phase. The first deliverable is a durable implementation specification, repo guidance, repo-local Codex skills, and repeatable commands. Package implementation starts only after the spec is stable enough to validate behavior.
+This repository is in the package scaffolding phase. The first deliverable was a durable implementation specification, repo guidance, repo-local Codex skills, and repeatable commands. The current scaffold provides package metadata, TypeScript build configuration, and lifecycle commands before converter implementation work begins.
 
 Current observed starting point:
 
@@ -359,7 +359,7 @@ The package skeleton should target:
 - ESM-first package exports
 - npm-compatible installation and packing
 
-The implementation milestone should choose a package manager deliberately and record that choice in `package.json` and `justfile`. The likely default is pnpm for the library package because the Temporal TypeScript SDK uses pnpm-style package workflows. Bun may still be useful for runnable fixture examples when it materially simplifies generated TypeScript execution.
+The package scaffold uses npm because npm is available with the supported Node.js runtime and keeps lifecycle commands runnable without an additional package manager install. Bun may still be useful for runnable fixture examples when it materially simplifies generated TypeScript execution.
 
 ## Test Plan
 
