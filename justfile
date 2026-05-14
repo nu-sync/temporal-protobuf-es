@@ -4,33 +4,33 @@ set shell := ["zsh", "-uc"]
 default:
     @just --list
 
+status:
+    git status --short --branch
+
 check: _check-docs _check-skills
 
 verify: check
     @echo "spec-phase verification complete"
 
-status:
-    git status --short --branch
+format: _package-scaffold-required
+    pnpm format
 
-diff:
-    git diff -- SPEC.md AGENTS.md justfile .agents/skills
+lint: _package-scaffold-required
+    pnpm lint
 
-spec:
-    sed -n '1,260p' SPEC.md
+typecheck: _package-scaffold-required
+    pnpm typecheck
 
-context:
-    sed -n '1,220p' AGENTS.md
+test: _package-scaffold-required
+    pnpm test
 
-skills:
-    @if [ -d .agents/skills ]; then \
-      for skill in .agents/skills/*/SKILL.md(N); do \
-        echo "$skill"; \
-        sed -n '1,8p' "$skill" | grep -E '^(name|description):'; \
-        echo; \
-      done; \
-    else \
-      echo "No .agents/skills directory yet"; \
-    fi
+build: _package-scaffold-required
+    pnpm build
+
+pack: _package-scaffold-required
+    npm pack --dry-run
+
+release-check: check format lint typecheck test build pack
 
 [private]
 _check-docs:
@@ -60,3 +60,7 @@ _check-skills:
     else \
       echo "No .agents/skills directory yet"; \
     fi
+
+[private]
+_package-scaffold-required:
+    @test -f package.json || (echo "Package scaffold not present yet. Complete the package skeleton milestone first." >&2; exit 1)

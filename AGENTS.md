@@ -9,7 +9,7 @@ The current repository phase is specification and project scaffolding. Keep impl
 ## Source Of Truth
 
 - `SPEC.md` is the product and implementation specification.
-- `justfile` is the command index for repeatable local checks and common repo inspection.
+- `justfile` is the command index for maintenance and developer lifecycle commands.
 - `.agents/skills/*/SKILL.md` contains repo-local Codex workflows for development, testing, maintenance, compatibility, and release work.
 
 Codex project instructions follow the documented repo-level `AGENTS.md` discovery model. Repo-local skills follow the documented `.agents/skills` discovery location and `SKILL.md` frontmatter format.
@@ -37,12 +37,15 @@ Codex project instructions follow the documented repo-level `AGENTS.md` discover
 ## Commands
 
 - `just --list`: show available recipes.
+- `just status`: show concise git status.
 - `just check`: run all currently available repository checks.
 - `just verify`: run the current phase's broad verification target.
-- `just spec`: print the current specification.
-- `just context`: print repo instructions.
-- `just skills`: list repo-local skill names and descriptions.
-- `just status`: show concise git status.
-- `just diff`: show documentation and repo-local skill changes.
+- `just format`: format package source once the package scaffold exists.
+- `just lint`: lint package source once the package scaffold exists.
+- `just typecheck`: typecheck package source once the package scaffold exists.
+- `just test`: run package tests once the package scaffold exists.
+- `just build`: build the package once the package scaffold exists.
+- `just pack`: dry-run npm package packing once the package scaffold exists.
+- `just release-check`: run the full local pre-release lifecycle.
 
-Implementation, test, fixture, packaging, and release recipes should be added when the corresponding files or workflows exist. Do not predeclare guarded recipes for future milestones.
+Package lifecycle recipes are intentionally guarded on `package.json` during the spec-first phase. Once the package scaffold exists, keep these recipes wired to the package manager and scripts chosen by that milestone.
