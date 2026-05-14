@@ -23,6 +23,7 @@ Codex project instructions follow the documented repo-level `AGENTS.md` discover
 - Run `just check` before each milestone commit once the command exists.
 - Commit each completed milestone with a focused message.
 - Do not publish packages, change external registries, or introduce credentials without explicit user direction.
+- Treat GitHub Actions as the official npm publishing path. Do not run local `npm publish` except as an explicitly requested emergency fallback.
 
 ## Current Context
 
@@ -48,5 +49,7 @@ Codex project instructions follow the documented repo-level `AGENTS.md` discover
 - `just build`: build the package.
 - `just pack`: dry-run npm package packing.
 - `just release-check`: run the full local pre-release lifecycle.
+
+Publishing is handled by `.github/workflows/publish.yml` when a GitHub release is published with a tag that matches `package.json`.
 
 Package lifecycle recipes use npm. Keep `package.json` scripts and `justfile` recipes aligned when commands change.

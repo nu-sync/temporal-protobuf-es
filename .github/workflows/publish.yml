@@ -1,0 +1,57 @@
+name: Publish Package
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  npm:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.release.prerelease }}
+    env:
+      NPM_TOKEN_PRESENT: ${{ secrets.NPM_TOKEN != '' }}
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.x"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      - name: Verify tag matches package version
+        run: |
+          package_version="$(node -p "require('./package.json').version")"
+          tag_version="${GITHUB_REF_NAME#v}"
+
+          if [ "$package_version" != "$tag_version" ]; then
+            echo "package.json version ($package_version) does not match release tag ($GITHUB_REF_NAME)"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run release checks
+        run: npm run release-check
+
+      - name: Publish with npm trusted publishing
+        if: ${{ env.NPM_TOKEN_PRESENT == 'false' }}
+        run: npm publish --access public
+
+      - name: Publish with temporary token and provenance
+        if: ${{ env.NPM_TOKEN_PRESENT == 'true' }}
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

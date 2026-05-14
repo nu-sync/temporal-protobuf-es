@@ -40,14 +40,16 @@ This package is intentionally external to `temporalio/sdk-typescript`. It should
 - GitHub repository: `nu-sync/temporal-protobuf-es`
 - npm package: `@nu-sync/temporal-protobuf-es`
 - Primary registry: npm
-- Initial publishing command: `npm publish --access public`
+- Official publishing path: GitHub Actions release workflow `.github/workflows/publish.yml`
+- First-release bootstrap: GitHub Actions with a temporary npm token and `npm publish --access public --provenance`
+- Long-term publishing path: npm trusted publishing from GitHub Actions, with no long-lived npm token
 - Future optional registry: JSR, after the npm package is stable and the Node install experience is understood
 
 The package name should remain scoped under `@nu-sync` to avoid implying that this is an official Temporal package.
 
 ## Publishing Recommendation
 
-Publish to npm first because the main consumers are applications using the Temporal TypeScript SDK, which already depend on npm packages and usually configure converters through Node resolution.
+Publish to npm first because the main consumers are applications using the Temporal TypeScript SDK, which already depend on npm packages and usually configure converters through Node resolution. npm publishing should happen through the GitHub Actions release workflow so the package is built from a public repository runner and can carry provenance.
 
 JSR can be considered later, but it should not be the first publishing target. JSR's Node support goes through its npm compatibility layer, and Temporal applications may need CommonJS or `require.resolve(...)` compatibility for `payloadConverterPath`.
 
@@ -533,6 +535,7 @@ Before the first public release:
 - peer dependency ranges are explicit
 - package metadata marks the package as community-maintained and not official Temporal SDK code
 - npm provenance, license, repository URL, and files list are configured deliberately
+- the GitHub Actions npm publish workflow runs `npm run release-check` before `npm publish`
 - documentation clearly distinguishes binary interop from explicit JSON protobuf mode
 
 ## Implementation Milestones

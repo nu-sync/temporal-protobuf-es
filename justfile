@@ -8,9 +8,10 @@ status:
     git status --short --branch
 
 check: _check-docs _check-skills
+    @just _run-package-script check
 
-verify: check lint test build
-    @echo "verification complete"
+verify:
+    @just _run-package-script verify
 
 format:
     @just _run-package-script format
@@ -29,10 +30,7 @@ test-unit:
     @just _run-package-script test:unit
 
 test-e2e: build
-    node --test test/e2e/npm-packed-fixture.test.mjs
-    node --test test/e2e/sdk-loader-fixture.test.mjs
-    node --test test/e2e/deno-packed-fixture.test.mjs
-    node --test test/e2e/rust-wire-format.test.mjs
+    @just _run-package-script test:e2e
 
 test-e2e-npm: build
     node --test test/e2e/npm-packed-fixture.test.mjs
@@ -53,9 +51,10 @@ build:
     @just _run-package-script build
 
 pack:
-    npm pack --dry-run
+    @just _run-package-script pack
 
-release-check: verify format pack
+release-check:
+    @just _run-package-script release-check
 
 [private]
 _check-docs:
