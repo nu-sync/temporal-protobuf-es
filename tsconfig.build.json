@@ -3,6 +3,7 @@
   "compilerOptions": {
     "declarationMap": true,
     "noEmit": false,
+    "outDir": "dist/esm",
     "sourceMap": true
   }
 }

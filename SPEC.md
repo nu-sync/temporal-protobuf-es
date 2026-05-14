@@ -2,7 +2,7 @@
 
 ## Status
 
-This repository is in the package scaffolding phase. The first deliverable was a durable implementation specification, repo guidance, repo-local Codex skills, and repeatable commands. The current scaffold provides package metadata, TypeScript build configuration, and lifecycle commands before converter implementation work begins.
+This repository now has a working package prototype. The first deliverable was a durable implementation specification, repo guidance, repo-local Codex skills, and repeatable commands. The current package provides protobuf-es payload converters, dual ESM/CommonJS package output, TypeScript build configuration, and focused unit tests.
 
 Current observed starting point:
 
@@ -69,7 +69,7 @@ Key behavior visible in those references:
 - Proto3 JSON protobuf payloads use `json/protobuf`.
 - Message type metadata stores the fully qualified protobuf message name when the schema has a package.
 - The protobuf-es implementation uses `@bufbuild/protobuf` APIs such as `createRegistry`, `isMessage`, `toBinary`, `fromBinary`, `toJson`, and `fromJson`.
-- The Temporal composite converter path should preserve the existing default protobuf ordering: undefined, binary/plain, protobuf JSON, protobuf binary, JSON/plain.
+- The upstream Temporal protobuf default historically places protobuf JSON before protobuf binary. This package makes the protobuf encode preference explicit and defaults helper-created converters to binary for cross-language Temporal payload compatibility.
 - `dataConverter.payloadConverterPath` loads a module through `require()` and requires a named `payloadConverter` export.
 
 The local sibling Temporal generator repositories, when present, provide codegen and cross-language wire-format anchors:
@@ -95,6 +95,7 @@ The package should expose generic converter building blocks:
 - `ProtobufEsJsonPayloadConverter`
 - `DefaultPayloadConverterWithProtobufsEs`
 - `ProtobufEsRegistryInput`
+- `ProtobufEsEncodePreference`
 
 It should also expose a small helper for the common case:
 
@@ -102,18 +103,24 @@ It should also expose a small helper for the common case:
 import { makeProtobufEsPayloadConverter } from '@nu-sync/temporal-protobuf-es';
 import { StartOrderRequestSchema, StartOrderResultSchema } from './gen/messages_pb';
 
-export const payloadConverter = makeProtobufEsPayloadConverter([
-  StartOrderRequestSchema,
-  StartOrderResultSchema,
-]);
+export const payloadConverter = makeProtobufEsPayloadConverter({
+  registry: [StartOrderRequestSchema, StartOrderResultSchema],
+  encode: 'binary',
+});
 ```
 
 The helper should accept either:
 
 - a `Registry` from `@bufbuild/protobuf`
 - an array of generated `DescMessage` schemas
+- an options object with `registry` and `encode: 'binary' | 'json'`
 
 The helper should return a Temporal `PayloadConverter` suitable for app-local `payload-converter.ts` modules.
+
+Named helpers should be available when applications want the encode preference to be obvious at the call site:
+
+- `makeBinaryProtobufEsPayloadConverter(registryOrSchemas)`
+- `makeJsonProtobufEsPayloadConverter(registryOrSchemas)`
 
 ## API Contracts
 
@@ -162,7 +169,17 @@ Invalid registry inputs should fail early with a `TypeError`.
 
 ### `DefaultPayloadConverterWithProtobufsEs`
 
-`DefaultPayloadConverterWithProtobufsEs` should compose converters in this order:
+`DefaultPayloadConverterWithProtobufsEs` should compose Temporal's default primitive converters with both protobuf-es converters. The protobuf converter order is controlled by `encode`.
+
+For `encode: 'binary'`, compose:
+
+1. Temporal undefined converter
+2. Temporal binary/plain converter
+3. protobuf-es binary converter
+4. protobuf-es JSON converter
+5. Temporal JSON/plain converter
+
+For `encode: 'json'`, compose:
 
 1. Temporal undefined converter
 2. Temporal binary/plain converter
@@ -170,13 +187,17 @@ Invalid registry inputs should fail early with a `TypeError`.
 4. protobuf-es binary converter
 5. Temporal JSON/plain converter
 
-This means the default converter should emit `json/protobuf` for protobuf-es messages, matching the existing Temporal protobuf default. Applications that need binary-first behavior can compose their own converter or use `ProtobufEsBinaryPayloadConverter` directly.
+Both modes should decode `binary/protobuf` and `json/protobuf` payloads whenever both protobuf converters are registered. The encode preference only controls which protobuf format wins when serializing protobuf-es message values.
+
+The class name is retained for Temporal familiarity, but in this package the default encode preference is `binary` because the package primarily exists to support cross-language Temporal protobuf workflows. TypeScript-only applications that prefer proto3 JSON should pass `encode: 'json'` or use `makeJsonProtobufEsPayloadConverter`.
 
 ### `makeProtobufEsPayloadConverter`
 
-`makeProtobufEsPayloadConverter(registryOrSchemas)` should be a thin ergonomic wrapper around `DefaultPayloadConverterWithProtobufsEs`.
+`makeProtobufEsPayloadConverter(registryOrSchemas)` should remain valid and default to binary protobuf encoding.
 
-The helper should not hide registry requirements, introduce global mutable state, or auto-discover generated files.
+`makeProtobufEsPayloadConverter({ registry, encode })` should be the preferred explicit form. The helper should not hide registry requirements, introduce global mutable state, or auto-discover generated files.
+
+`makeBinaryProtobufEsPayloadConverter(registryOrSchemas)` and `makeJsonProtobufEsPayloadConverter(registryOrSchemas)` should be named helpers around the same composite converter.
 
 ## Implementation Constraints
 
@@ -194,14 +215,12 @@ Example:
 
 ```ts
 import { createRegistry } from '@bufbuild/protobuf';
-import { DefaultPayloadConverterWithProtobufsEs } from '@nu-sync/temporal-protobuf-es';
+import { makeBinaryProtobufEsPayloadConverter } from '@nu-sync/temporal-protobuf-es';
 import { StartOrderRequestSchema, StartOrderResultSchema } from './gen/messages_pb';
 
 const registry = createRegistry(StartOrderRequestSchema, StartOrderResultSchema);
 
-export const payloadConverter = new DefaultPayloadConverterWithProtobufsEs({
-  registry,
-});
+export const payloadConverter = makeBinaryProtobufEsPayloadConverter(registry);
 ```
 
 Client usage:
@@ -250,7 +269,10 @@ Temporal TypeScript SDK `payloadConverterPath` expects the resolved module to ha
 import { makeProtobufEsPayloadConverter } from '@nu-sync/temporal-protobuf-es';
 import { schemas } from './gen/orders_pb_register';
 
-export const payloadConverter = makeProtobufEsPayloadConverter(schemas);
+export const payloadConverter = makeProtobufEsPayloadConverter({
+  registry: schemas,
+  encode: 'binary',
+});
 ```
 
 For ESM application code that still needs `require.resolve(...)`, use `createRequire(import.meta.url)` in the app-local client and worker modules.
@@ -320,10 +342,10 @@ The wire format should match Temporal protobuf conventions:
 
 There are two related but distinct behaviors:
 
-- Default Temporal TypeScript ergonomics: `DefaultPayloadConverterWithProtobufsEs` should emit `json/protobuf` for protobuf-es messages because protobuf JSON appears before protobuf binary in the default composite converter order.
-- Cross-language generated-client interoperability: Rust and Go compatibility should use binary protobuf payloads with `encoding = "binary/protobuf"`, `messageType = fully qualified proto message name`, and `data = raw proto wire bytes`.
+- TypeScript protobuf JSON ergonomics: applications can choose `encode: 'json'` so protobuf-es messages emit `json/protobuf` while still decoding `binary/protobuf` payloads.
+- Cross-language generated-client interoperability: the helper default and `encode: 'binary'` should use binary protobuf payloads with `encoding = "binary/protobuf"`, `messageType = fully qualified proto message name`, and `data = raw proto wire bytes`, while still decoding `json/protobuf` payloads.
 
-The package should make both behaviors explicit. Documentation should recommend the default composite converter for ordinary TypeScript app ergonomics and direct binary converter composition for generated clients or cross-language workflows that require the binary contract.
+The package should make both behaviors explicit. Documentation should recommend binary encoding for generated clients or cross-language workflows that require the binary contract, and JSON encoding for TypeScript-only applications that prefer readable proto3 JSON payloads.
 
 `google.protobuf.Empty` needs an explicit decision before release. Rust generator compatibility treats Empty as a normal protobuf payload triple with `messageType = "google.protobuf.Empty"` and empty `data`; this package should either include `EmptySchema` automatically in helper-created registries or document that applications and generated schema inventories must register it manually.
 
@@ -347,19 +369,21 @@ Expected exports from `src/index.ts`:
 - converter classes
 - `ProtobufEsRegistryInput`
 - `makeProtobufEsPayloadConverter`
+- `makeBinaryProtobufEsPayloadConverter`
+- `makeJsonProtobufEsPayloadConverter`
 
 Internal implementation details should remain in `src/protobuf-es-payload-converters.ts` unless the package grows enough to justify additional files.
 
 ## Tooling Direction
 
-The package skeleton should target:
+The package should target:
 
 - Node.js `>=20`
 - TypeScript `>=5.5`
-- ESM-first package exports
+- dual ESM and CommonJS package exports
 - npm-compatible installation and packing
 
-The package scaffold uses npm because npm is available with the supported Node.js runtime and keeps lifecycle commands runnable without an additional package manager install. Bun may still be useful for runnable fixture examples when it materially simplifies generated TypeScript execution.
+The package uses npm because npm is available with the supported Node.js runtime and keeps lifecycle commands runnable without an additional package manager install. Bun may still be useful for runnable fixture examples when it materially simplifies generated TypeScript execution.
 
 ## Test Plan
 
@@ -371,7 +395,9 @@ Unit tests should verify:
 - binary payloads round-trip through `ProtobufEsBinaryPayloadConverter`
 - JSON payloads round-trip through `ProtobufEsJsonPayloadConverter`
 - the default composite converter delegates ordinary JSON, binary, and `undefined` values correctly
-- default composite converter emits protobuf JSON before protobuf binary
+- helper-created composite converters default to binary protobuf encoding
+- `encode: 'json'` emits protobuf JSON before protobuf binary
+- both composite encode modes decode binary and JSON protobuf payloads
 - missing registry entries produce useful errors
 - malformed payload metadata produces useful errors
 - `google.protobuf.Any` works when the registry contains embedded message schemas
@@ -386,6 +412,7 @@ Create a minimal npm-installed fixture application that:
 - installs `@nu-sync/temporal-protobuf-es` from the packed npm tarball
 - installs `@bufbuild/protobuf` and Temporal SDK packages through npm-compatible package managers
 - uses both ESM imports and the `payloadConverterPath` pattern expected by Temporal workers
+- verifies the package's CommonJS export can be loaded with `require()`
 - verifies `require.resolve('./payload-converter')` works where the SDK needs it
 - verifies the app-local converter module has a named `payloadConverter` export
 - starts a TypeScript client and worker using the converter
@@ -444,6 +471,7 @@ Before the first public release:
 
 - the npm package installs cleanly from `npm pack`
 - the package exports work in at least one ESM Node fixture
+- the package CommonJS export works with `require()`
 - the Temporal `payloadConverterPath` fixture works
 - the Deno converter fixture passes
 - the Rust binary payload compatibility fixture passes
@@ -451,7 +479,7 @@ Before the first public release:
 - peer dependency ranges are explicit
 - package metadata marks the package as community-maintained and not official Temporal SDK code
 - npm provenance, license, repository URL, and files list are configured deliberately
-- direct binary converter documentation clearly distinguishes binary interop from default composite JSON behavior
+- documentation clearly distinguishes binary interop from explicit JSON protobuf mode
 
 ## Implementation Milestones
 
@@ -471,8 +499,6 @@ Before the first public release:
 ## Open Questions
 
 - Should the package ship a Temporal `SimplePlugin` wrapper, a custom plugin class, or only converter helpers for the first release?
-- Should the package support CommonJS directly, or only expose ESM plus a documented app-local CommonJS converter file pattern?
 - Should `protoc-gen-ts-temporal` generate the app-local `payload-converter.ts` file automatically?
 - Should JSON protobuf compatibility be considered a required cross-language guarantee, or should binary protobuf be the primary supported path?
-- Should the helper expose a binary-first option, or should binary-first behavior require explicit manual composition?
 - Should helper-created registries include `google.protobuf.Empty` automatically, or should generated schema inventories include `EmptySchema` whenever Empty appears in service inputs or outputs?
