@@ -50,10 +50,3 @@ Codex project instructions follow the documented repo-level `AGENTS.md` discover
 - `just status`: show concise git status.
 
 Implementation and release recipes are already named in `justfile` but intentionally guard on `package.json` until the package skeleton milestone exists. They currently assume pnpm for package scripts and should be updated if the implementation milestone chooses a different package manager.
-
-## Milestone History
-
-- `f738edd chore: bootstrap spec repository`: initialized git, baseline instructions, ignore rules, and current-phase checks.
-- `d0db5b7 docs: structure implementation spec`: reshaped `SPEC.md` around API contracts, compatibility goals, tests, and release criteria.
-- `a30efb4 docs: add repo codex skills`: added repo-local skills for development, testing, maintenance, compatibility, and release workflows.
-- `b6b9322 docs: pin converter compatibility contract`: pinned SDK and generator behavior around converter ordering, `payloadConverterPath`, binary interop, and future commands.
