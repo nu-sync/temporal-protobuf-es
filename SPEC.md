@@ -97,15 +97,19 @@ The package should expose generic converter building blocks:
 - `ProtobufEsRegistryInput`
 - `ProtobufEsEncodePreference`
 
-It should also expose a small helper for the common case:
+It should also expose a small helper for the common case. Prefer the `create*`
+names in documentation; keep `make*` aliases for callers who prefer that style.
 
 ```ts
-import { makeProtobufEsPayloadConverter } from '@nu-sync/temporal-protobuf-es';
-import { StartOrderRequestSchema, StartOrderResultSchema } from './gen/messages_pb';
+import { createProtobufEsPayloadConverter } from "@nu-sync/temporal-protobuf-es";
+import {
+  StartOrderRequestSchema,
+  StartOrderResultSchema,
+} from "./gen/messages_pb";
 
-export const payloadConverter = makeProtobufEsPayloadConverter({
-  registry: [StartOrderRequestSchema, StartOrderResultSchema],
-  encode: 'binary',
+export const payloadConverter = createProtobufEsPayloadConverter({
+  schemas: [StartOrderRequestSchema, StartOrderResultSchema],
+  encoding: "binary",
 });
 ```
 
@@ -113,12 +117,16 @@ The helper should accept either:
 
 - a `Registry` from `@bufbuild/protobuf`
 - an array of generated `DescMessage` schemas
-- an options object with `registry` and `encode: 'binary' | 'json'`
+- an options object with `registry` or `schemas`, plus `encoding: 'binary' | 'json'`
 
 The helper should return a Temporal `PayloadConverter` suitable for app-local `payload-converter.ts` modules.
 
 Named helpers should be available when applications want the encode preference to be obvious at the call site:
 
+- `createProtobufEsPayloadConverter(registryOrOptions)`
+- `createBinaryProtobufEsPayloadConverter(registryOrSchemas)`
+- `createJsonProtobufEsPayloadConverter(registryOrSchemas)`
+- `makeProtobufEsPayloadConverter(registryOrOptions)`
 - `makeBinaryProtobufEsPayloadConverter(registryOrSchemas)`
 - `makeJsonProtobufEsPayloadConverter(registryOrSchemas)`
 
@@ -129,7 +137,7 @@ Named helpers should be available when applications want the encode preference t
 `ProtobufEsRegistryInput` should be:
 
 ```ts
-import type { DescMessage, Registry } from '@bufbuild/protobuf';
+import type { DescMessage, Registry } from "@bufbuild/protobuf";
 
 export type ProtobufEsRegistryInput = Registry | readonly DescMessage[];
 ```
@@ -189,15 +197,17 @@ For `encode: 'json'`, compose:
 
 Both modes should decode `binary/protobuf` and `json/protobuf` payloads whenever both protobuf converters are registered. The encode preference only controls which protobuf format wins when serializing protobuf-es message values.
 
-The class name is retained for Temporal familiarity, but in this package the default encode preference is `binary` because the package primarily exists to support cross-language Temporal protobuf workflows. TypeScript-only applications that prefer proto3 JSON should pass `encode: 'json'` or use `makeJsonProtobufEsPayloadConverter`.
+The class name is retained for Temporal familiarity, but in this package the default encode preference is `binary` because the package primarily exists to support cross-language Temporal protobuf workflows. TypeScript-only applications that prefer proto3 JSON should pass `encoding: 'json'` or use `createJsonProtobufEsPayloadConverter`.
 
-### `makeProtobufEsPayloadConverter`
+### `createProtobufEsPayloadConverter`
 
-`makeProtobufEsPayloadConverter(registryOrSchemas)` should remain valid and default to binary protobuf encoding.
+`createProtobufEsPayloadConverter(registryOrSchemas)` should remain valid and default to binary protobuf encoding.
 
-`makeProtobufEsPayloadConverter({ registry, encode })` should be the preferred explicit form. The helper should not hide registry requirements, introduce global mutable state, or auto-discover generated files.
+`createProtobufEsPayloadConverter({ registry, encoding })` and `createProtobufEsPayloadConverter({ schemas, encoding })` should be the preferred explicit forms. The helper should not hide registry requirements, introduce global mutable state, or auto-discover generated files.
 
-`makeBinaryProtobufEsPayloadConverter(registryOrSchemas)` and `makeJsonProtobufEsPayloadConverter(registryOrSchemas)` should be named helpers around the same composite converter.
+`createBinaryProtobufEsPayloadConverter(registryOrSchemas)` and `createJsonProtobufEsPayloadConverter(registryOrSchemas)` should be named helpers around the same composite converter.
+
+`makeProtobufEsPayloadConverter`, `makeBinaryProtobufEsPayloadConverter`, and `makeJsonProtobufEsPayloadConverter` should remain aliases for callers who prefer the `make*` naming style.
 
 ## Implementation Constraints
 
@@ -214,28 +224,35 @@ Applications should create an app-local `payload-converter.ts` file because the 
 Example:
 
 ```ts
-import { createRegistry } from '@bufbuild/protobuf';
-import { makeBinaryProtobufEsPayloadConverter } from '@nu-sync/temporal-protobuf-es';
-import { StartOrderRequestSchema, StartOrderResultSchema } from './gen/messages_pb';
+import { createRegistry } from "@bufbuild/protobuf";
+import { createBinaryProtobufEsPayloadConverter } from "@nu-sync/temporal-protobuf-es";
+import {
+  StartOrderRequestSchema,
+  StartOrderResultSchema,
+} from "./gen/messages_pb";
 
-const registry = createRegistry(StartOrderRequestSchema, StartOrderResultSchema);
+const registry = createRegistry(
+  StartOrderRequestSchema,
+  StartOrderResultSchema,
+);
 
-export const payloadConverter = makeBinaryProtobufEsPayloadConverter(registry);
+export const payloadConverter =
+  createBinaryProtobufEsPayloadConverter(registry);
 ```
 
 Client usage:
 
 ```ts
-import { Client } from '@temporalio/client';
-import { createRequire } from 'node:module';
+import { Client } from "@temporalio/client";
+import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 
 const client = new Client({
   connection,
-  namespace: 'default',
+  namespace: "default",
   dataConverter: {
-    payloadConverterPath: require.resolve('./payload-converter'),
+    payloadConverterPath: require.resolve("./payload-converter"),
   },
 });
 ```
@@ -243,18 +260,18 @@ const client = new Client({
 Worker usage:
 
 ```ts
-import { Worker } from '@temporalio/worker';
-import { createRequire } from 'node:module';
+import { Worker } from "@temporalio/worker";
+import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 
 const worker = await Worker.create({
   connection,
-  taskQueue: 'orders',
-  workflowsPath: require.resolve('./workflows'),
+  taskQueue: "orders",
+  workflowsPath: require.resolve("./workflows"),
   activities,
   dataConverter: {
-    payloadConverterPath: require.resolve('./payload-converter'),
+    payloadConverterPath: require.resolve("./payload-converter"),
   },
 });
 ```
@@ -266,12 +283,12 @@ A plugin wrapper may be added after the base converter is stable. The converter 
 Temporal TypeScript SDK `payloadConverterPath` expects the resolved module to have a named `payloadConverter` export with `toPayload` and `fromPayload` methods. Examples and tests should always model that shape:
 
 ```ts
-import { makeProtobufEsPayloadConverter } from '@nu-sync/temporal-protobuf-es';
-import { schemas } from './gen/orders_pb_register';
+import { createProtobufEsPayloadConverter } from "@nu-sync/temporal-protobuf-es";
+import { schemas } from "./gen/orders_pb_register";
 
-export const payloadConverter = makeProtobufEsPayloadConverter({
-  registry: schemas,
-  encode: 'binary',
+export const payloadConverter = createProtobufEsPayloadConverter({
+  schemas,
+  encoding: "binary",
 });
 ```
 
@@ -284,8 +301,8 @@ For ESM application code that still needs `require.resolve(...)`, use `createReq
 The generator's `_pb_register.ts` pattern should remain compatible:
 
 ```ts
-import type { DescMessage } from '@bufbuild/protobuf';
-import { RunRequestSchema, RunResultSchema } from './orders_pb';
+import type { DescMessage } from "@bufbuild/protobuf";
+import { RunRequestSchema, RunResultSchema } from "./orders_pb";
 
 export const schemas: readonly DescMessage[] = [
   RunRequestSchema,
@@ -296,11 +313,11 @@ export const schemas: readonly DescMessage[] = [
 Applications can combine one or more generated schema arrays into the package helper:
 
 ```ts
-import { makeProtobufEsPayloadConverter } from '@nu-sync/temporal-protobuf-es';
-import { schemas as orderSchemas } from './gen/orders_pb_register';
-import { schemas as customerSchemas } from './gen/customers_pb_register';
+import { createProtobufEsPayloadConverter } from "@nu-sync/temporal-protobuf-es";
+import { schemas as orderSchemas } from "./gen/orders_pb_register";
+import { schemas as customerSchemas } from "./gen/customers_pb_register";
 
-export const payloadConverter = makeProtobufEsPayloadConverter([
+export const payloadConverter = createProtobufEsPayloadConverter([
   ...orderSchemas,
   ...customerSchemas,
 ]);

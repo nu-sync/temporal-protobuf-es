@@ -28,10 +28,14 @@ const textDecoder = new TextDecoder();
 export type ProtobufEsRegistryInput = Registry | readonly DescMessage[];
 export type ProtobufEsEncodePreference = "binary" | "json";
 
-export interface ProtobufEsPayloadConverterOptions {
-  readonly registry: ProtobufEsRegistryInput;
+export type ProtobufEsSchemaSource =
+  | { readonly registry: ProtobufEsRegistryInput; readonly schemas?: never }
+  | { readonly schemas: readonly DescMessage[]; readonly registry?: never };
+
+export type ProtobufEsPayloadConverterOptions = ProtobufEsSchemaSource & {
   readonly encode?: ProtobufEsEncodePreference;
-}
+  readonly encoding?: ProtobufEsEncodePreference;
+};
 
 abstract class ProtobufEsPayloadConverter implements PayloadConverterWithEncoding {
   protected readonly registry: Registry | undefined;
@@ -156,17 +160,19 @@ export class ProtobufEsJsonPayloadConverter extends ProtobufEsPayloadConverter {
   }
 }
 
-export interface DefaultPayloadConverterWithProtobufsEsOptions {
-  readonly registry: ProtobufEsRegistryInput;
-  readonly encode?: ProtobufEsEncodePreference;
-}
+export type DefaultPayloadConverterWithProtobufsEsOptions =
+  ProtobufEsPayloadConverterOptions;
+
+export type ProtobufEsPayloadConverterInput =
+  | ProtobufEsRegistryInput
+  | ProtobufEsPayloadConverterOptions;
 
 export class DefaultPayloadConverterWithProtobufsEs extends CompositePayloadConverter {
   public readonly encode: ProtobufEsEncodePreference;
 
   public constructor(options: DefaultPayloadConverterWithProtobufsEsOptions) {
-    const encode = normalizeEncodePreference(options.encode);
-    const registry = normalizeRegistry(options.registry);
+    const encode = normalizeOptionsEncodePreference(options);
+    const registry = normalizeRegistryFromOptions(options);
     const [firstProtobufConverter, secondProtobufConverter] =
       makeOrderedProtobufConverters(registry, encode);
 
@@ -182,33 +188,37 @@ export class DefaultPayloadConverterWithProtobufsEs extends CompositePayloadConv
   }
 }
 
-export function makeProtobufEsPayloadConverter(
-  registryOrOptions:
-    | ProtobufEsRegistryInput
-    | ProtobufEsPayloadConverterOptions,
+export function createProtobufEsPayloadConverter(
+  registryOrOptions: ProtobufEsPayloadConverterInput,
 ): DefaultPayloadConverterWithProtobufsEs {
   return new DefaultPayloadConverterWithProtobufsEs(
     normalizePayloadConverterOptions(registryOrOptions),
   );
 }
 
-export function makeBinaryProtobufEsPayloadConverter(
+export function createBinaryProtobufEsPayloadConverter(
   registryOrSchemas: ProtobufEsRegistryInput,
 ): DefaultPayloadConverterWithProtobufsEs {
-  return makeProtobufEsPayloadConverter({
+  return createProtobufEsPayloadConverter({
     registry: registryOrSchemas,
     encode: "binary",
   });
 }
 
-export function makeJsonProtobufEsPayloadConverter(
+export function createJsonProtobufEsPayloadConverter(
   registryOrSchemas: ProtobufEsRegistryInput,
 ): DefaultPayloadConverterWithProtobufsEs {
-  return makeProtobufEsPayloadConverter({
+  return createProtobufEsPayloadConverter({
     registry: registryOrSchemas,
     encode: "json",
   });
 }
+
+export const makeProtobufEsPayloadConverter = createProtobufEsPayloadConverter;
+export const makeBinaryProtobufEsPayloadConverter =
+  createBinaryProtobufEsPayloadConverter;
+export const makeJsonProtobufEsPayloadConverter =
+  createJsonProtobufEsPayloadConverter;
 
 function makeOrderedProtobufConverters(
   registryOrSchemas: ProtobufEsRegistryInput,
@@ -221,15 +231,10 @@ function makeOrderedProtobufConverters(
 }
 
 function normalizePayloadConverterOptions(
-  registryOrOptions:
-    | ProtobufEsRegistryInput
-    | ProtobufEsPayloadConverterOptions,
+  registryOrOptions: ProtobufEsPayloadConverterInput,
 ): DefaultPayloadConverterWithProtobufsEsOptions {
   if (isPayloadConverterOptions(registryOrOptions)) {
-    return {
-      registry: registryOrOptions.registry,
-      encode: normalizeEncodePreference(registryOrOptions.encode),
-    };
+    return registryOrOptions;
   }
 
   return {
@@ -239,9 +244,50 @@ function normalizePayloadConverterOptions(
 }
 
 function isPayloadConverterOptions(
-  value: ProtobufEsRegistryInput | ProtobufEsPayloadConverterOptions,
+  value: ProtobufEsPayloadConverterInput,
 ): value is ProtobufEsPayloadConverterOptions {
-  return isRecord(value) && "registry" in value;
+  return (
+    isRecord(value) &&
+    !isRegistry(value) &&
+    ("registry" in value ||
+      "schemas" in value ||
+      "encode" in value ||
+      "encoding" in value)
+  );
+}
+
+function normalizeRegistryFromOptions(
+  options: DefaultPayloadConverterWithProtobufsEsOptions,
+): Registry {
+  if ("registry" in options && "schemas" in options) {
+    throw new TypeError("Specify either `registry` or `schemas`, not both");
+  }
+
+  if ("registry" in options) {
+    return normalizeRegistry(options.registry);
+  }
+
+  if ("schemas" in options) {
+    return normalizeRegistry(options.schemas);
+  }
+
+  throw new TypeError("`registry` or `schemas` must be provided");
+}
+
+function normalizeOptionsEncodePreference(
+  options: DefaultPayloadConverterWithProtobufsEsOptions,
+): ProtobufEsEncodePreference {
+  if (
+    options.encode !== undefined &&
+    options.encoding !== undefined &&
+    options.encode !== options.encoding
+  ) {
+    throw new TypeError(
+      "`encode` and `encoding` must agree when both are provided",
+    );
+  }
+
+  return normalizeEncodePreference(options.encoding ?? options.encode);
 }
 
 function normalizeEncodePreference(

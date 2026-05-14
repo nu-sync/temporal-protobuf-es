@@ -22,6 +22,9 @@ import {
   DefaultPayloadConverterWithProtobufsEs,
   ProtobufEsBinaryPayloadConverter,
   ProtobufEsJsonPayloadConverter,
+  createBinaryProtobufEsPayloadConverter,
+  createJsonProtobufEsPayloadConverter,
+  createProtobufEsPayloadConverter,
   makeBinaryProtobufEsPayloadConverter,
   makeJsonProtobufEsPayloadConverter,
   makeProtobufEsPayloadConverter,
@@ -155,9 +158,9 @@ test("protobuf payload metadata byte arrays are fresh per conversion", () => {
 });
 
 test("default helper encodes binary protobuf and still decodes json protobuf", () => {
-  const converter = makeProtobufEsPayloadConverter({
-    registry,
-    encode: "binary",
+  const converter = createProtobufEsPayloadConverter({
+    schemas: [TimestampSchema, AnySchema],
+    encoding: "binary",
   });
   const message = timestamp();
   const binaryPayload = converter.toPayload(message);
@@ -173,7 +176,7 @@ test("default helper encodes binary protobuf and still decodes json protobuf", (
 });
 
 test("registry-only helper input defaults to binary encoding", () => {
-  const converter = makeProtobufEsPayloadConverter([TimestampSchema]);
+  const converter = createProtobufEsPayloadConverter([TimestampSchema]);
   const payload = converter.toPayload(timestamp());
 
   assert.equal(converter.encode, "binary");
@@ -184,7 +187,7 @@ test("registry-only helper input defaults to binary encoding", () => {
 });
 
 test("json helper encodes json protobuf and still decodes binary protobuf", () => {
-  const converter = makeJsonProtobufEsPayloadConverter(registry);
+  const converter = createJsonProtobufEsPayloadConverter(registry);
   const message = timestamp();
   const jsonPayload = converter.toPayload(message);
   const binaryPayload = new ProtobufEsBinaryPayloadConverter(
@@ -200,13 +203,28 @@ test("json helper encodes json protobuf and still decodes binary protobuf", () =
 });
 
 test("binary helper is explicit about binary encoding preference", () => {
-  const converter = makeBinaryProtobufEsPayloadConverter(registry);
+  const converter = createBinaryProtobufEsPayloadConverter(registry);
   const payload = converter.toPayload(timestamp());
 
   assert.equal(converter.encode, "binary");
   assert.equal(
     decodeMetadata(payload, METADATA_ENCODING_KEY),
     "binary/protobuf",
+  );
+});
+
+test("make helpers remain aliases for create helpers", () => {
+  assert.equal(
+    makeProtobufEsPayloadConverter,
+    createProtobufEsPayloadConverter,
+  );
+  assert.equal(
+    makeBinaryProtobufEsPayloadConverter,
+    createBinaryProtobufEsPayloadConverter,
+  );
+  assert.equal(
+    makeJsonProtobufEsPayloadConverter,
+    createJsonProtobufEsPayloadConverter,
   );
 });
 
@@ -231,11 +249,12 @@ test("composite converter delegates undefined, binary, and plain json values", (
 test("package exposes CommonJS entrypoint for payloadConverterPath users", () => {
   const cjsPackage = require("@nu-sync/temporal-protobuf-es");
 
-  assert.equal(typeof cjsPackage.makeProtobufEsPayloadConverter, "function");
+  assert.equal(typeof cjsPackage.createProtobufEsPayloadConverter, "function");
   assert.equal(
-    typeof cjsPackage.makeBinaryProtobufEsPayloadConverter,
+    typeof cjsPackage.createBinaryProtobufEsPayloadConverter,
     "function",
   );
+  assert.equal(typeof cjsPackage.makeProtobufEsPayloadConverter, "function");
 });
 
 test("CommonJS payloadConverterPath module exposes a named payloadConverter", () => {
@@ -258,10 +277,34 @@ test("invalid registry inputs fail early", () => {
     name: TypeError.name,
   });
   assert.throws(
-    () => makeProtobufEsPayloadConverter({ registry: [], encode: "other" }),
+    () => createProtobufEsPayloadConverter({ registry: [], encode: "other" }),
     {
       name: TypeError.name,
       message: "`encode` must be either `binary` or `json`",
+    },
+  );
+  assert.throws(
+    () =>
+      createProtobufEsPayloadConverter({
+        registry: [],
+        schemas: [],
+        encoding: "binary",
+      }),
+    {
+      name: TypeError.name,
+      message: "Specify either `registry` or `schemas`, not both",
+    },
+  );
+  assert.throws(
+    () =>
+      createProtobufEsPayloadConverter({
+        registry: [],
+        encode: "binary",
+        encoding: "json",
+      }),
+    {
+      name: TypeError.name,
+      message: "`encode` and `encoding` must agree when both are provided",
     },
   );
 });
