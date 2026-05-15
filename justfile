@@ -32,28 +32,31 @@ typecheck:
     @just _run-package-script typecheck
 
 test:
-    @just test-unit
-    @just test-e2e
+    @just _run-package-script test
 
 test-unit:
     @just _run-package-script test:unit
 
-test-e2e: build
+test-e2e:
     @just _run-package-script test:e2e
 
-test-e2e-npm: build
+test-e2e-npm:
+    @just build
     node --test test/e2e/npm-packed-fixture.test.mjs
 
-test-e2e-sdk-loader: build
+test-e2e-sdk-loader:
+    @just build
     node --test test/e2e/sdk-loader-fixture.test.mjs
 
 test-e2e-generated-schema:
     @just _run-package-script test:e2e:generated-schema
 
-test-e2e-deno: build
+test-e2e-deno:
+    @just build
     node --test test/e2e/deno-packed-fixture.test.mjs
 
-test-e2e-rust: build
+test-e2e-rust:
+    @just build
     node --test test/e2e/rust-wire-format.test.mjs
 
 test-e2e-temporal-worker:

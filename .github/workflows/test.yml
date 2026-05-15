@@ -25,17 +25,16 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: "24.x"
-          package-manager-cache: false
+          cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Set up Deno
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
 
-      - name: Set up Rust
-        run: |
-          rustup toolchain install stable --profile minimal
-          rustup default stable
+      - name: Verify Rust compiler
+        run: rustc --version
 
       - name: Install dependencies
         run: npm ci
