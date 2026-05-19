@@ -139,6 +139,40 @@ test("protobuf converters report missing registry and malformed payload failures
       message: "Got protobuf payload without metadata.messageType",
     },
   );
+
+  assert.throws(
+    () =>
+      converter.fromPayload({
+        metadata: {
+          [METADATA_MESSAGE_TYPE_KEY]: new TextEncoder().encode(
+            "google.protobuf.Timestamp",
+          ),
+        },
+        data: new Uint8Array(),
+      }),
+    {
+      name: ValueError.name,
+      message: "Got protobuf payload without metadata.encoding",
+    },
+  );
+
+  assert.throws(
+    () =>
+      converter.fromPayload({
+        metadata: {
+          [METADATA_ENCODING_KEY]: new TextEncoder().encode("json/protobuf"),
+          [METADATA_MESSAGE_TYPE_KEY]: new TextEncoder().encode(
+            "google.protobuf.Timestamp",
+          ),
+        },
+        data: new Uint8Array(),
+      }),
+    {
+      name: ValueError.name,
+      message:
+        "Got protobuf payload with metadata.encoding=json/protobuf; expected binary/protobuf",
+    },
+  );
 });
 
 test("protobuf payload metadata byte arrays are fresh per conversion", () => {

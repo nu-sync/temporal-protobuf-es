@@ -36,6 +36,7 @@ export const payloadConverter = createProtobufEsPayloadConverter({
       `import assert from "node:assert/strict";
 
 import { create } from "@bufbuild/protobuf";
+import { EmptySchema } from "@bufbuild/protobuf/wkt";
 import {
   METADATA_ENCODING_KEY,
   METADATA_MESSAGE_TYPE_KEY,
@@ -67,10 +68,19 @@ function metadata(payload, key) {
 assert.deepEqual(
   schemas.map((schema) => schema.typeName),
   [
+    "google.protobuf.Empty",
     "temporal.protobufes.fixture.StartOrderRequest",
     "temporal.protobufes.fixture.StartOrderResult",
   ],
 );
+
+const emptyPayload = payloadConverter.toPayload(create(EmptySchema));
+assert.equal(metadata(emptyPayload, METADATA_ENCODING_KEY), "binary/protobuf");
+assert.equal(
+  metadata(emptyPayload, METADATA_MESSAGE_TYPE_KEY),
+  "google.protobuf.Empty",
+);
+assert.equal(emptyPayload.data.length, 0);
 
 const requestPayload = payloadConverter.toPayload(request);
 assert.equal(metadata(requestPayload, METADATA_ENCODING_KEY), "binary/protobuf");

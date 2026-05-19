@@ -64,6 +64,19 @@ abstract class ProtobufEsPayloadConverter implements PayloadConverterWithEncodin
       throw new ValueError("Got payload with no data");
     }
 
+    const encoding = payload.metadata?.[METADATA_ENCODING_KEY];
+    if (encoding === undefined) {
+      throw new ValueError(
+        `Got protobuf payload without metadata.${METADATA_ENCODING_KEY}`,
+      );
+    }
+    const actualEncoding = decodeString(encoding);
+    if (actualEncoding !== this.encodingType) {
+      throw new ValueError(
+        `Got protobuf payload with metadata.${METADATA_ENCODING_KEY}=${actualEncoding}; expected ${this.encodingType}`,
+      );
+    }
+
     const messageType = payload.metadata?.[METADATA_MESSAGE_TYPE_KEY];
     if (messageType === undefined) {
       throw new ValueError(
