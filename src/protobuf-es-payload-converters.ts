@@ -145,6 +145,9 @@ export class ProtobufEsBinaryPayloadConverter extends ProtobufEsPayloadConverter
 
   public fromPayload<T>(payload: Payload): T {
     const { schema, data } = this.validatePayload(payload);
+    // A Node Buffer is a view into a shared, pooled ArrayBuffer; re-wrap it as a
+    // plain Uint8Array bounded to this payload so protobuf-es cannot read past
+    // byteLength into adjacent buffer contents.
     const localDataView = new Uint8Array(
       data.buffer,
       data.byteOffset,
