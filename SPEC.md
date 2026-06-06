@@ -369,6 +369,14 @@ The wire format should match Temporal protobuf conventions:
 
 ## Wire Format Modes
 
+The binary protobuf payload triple (`encoding = "binary/protobuf"`,
+`messageType = fully qualified proto message name`, `data = raw proto wire
+bytes`) is the cross-language interop contract. This SPEC is the canonical
+TypeScript-side mirror of that contract; the authoritative copy lives in
+[`protoc-gen-rust-temporal/WIRE-FORMAT.md`](https://github.com/nu-sync/protoc-gen-rust-temporal/blob/main/WIRE-FORMAT.md).
+Any change to the triple must land in both documents in the same change so the
+Rust and TypeScript sides cannot drift.
+
 There are two related but distinct behaviors:
 
 - TypeScript protobuf JSON ergonomics: applications can choose `encode: 'json'` so protobuf-es messages emit `json/protobuf` while still decoding `binary/protobuf` payloads.

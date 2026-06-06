@@ -27,7 +27,7 @@
     "check": "node scripts/check-repo.mjs && npm run check:generated-fixtures",
     "check:generated-fixtures": "npm run generate:fixtures && git diff --exit-code -- test/e2e/generated-schema/orders_pb.d.ts test/e2e/generated-schema/orders_pb.js",
     "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json && tsc -p tsconfig.cjs.json && node -e \"require('node:fs').writeFileSync('dist/cjs/package.json', JSON.stringify({ type: 'commonjs' }) + '\\n')\"",
-    "format": "prettier --check package.json package-lock.json tsconfig.json tsconfig.build.json tsconfig.cjs.json buf.gen.yaml README.md \"scripts/**/*.mjs\" \"src/**/*.ts\" \"test/**/*.cjs\" \"test/**/*.mjs\"",
+    "format": "prettier --check package.json package-lock.json tsconfig.json tsconfig.build.json tsconfig.cjs.json buf.gen.yaml README.md CONTRIBUTING.md CHANGELOG.md \"examples/**/*.ts\" \"scripts/**/*.mjs\" \"src/**/*.ts\" \"test/**/*.cjs\" \"test/**/*.mjs\"",
     "generate:fixtures": "buf generate",
     "lint": "npm run typecheck",
     "pack": "npm pack --dry-run",
