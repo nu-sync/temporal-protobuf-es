@@ -2,34 +2,32 @@
 
 [![npm](https://img.shields.io/npm/v/%40nu-sync%2Ftemporal-protobuf-es.svg)](https://www.npmjs.com/package/@nu-sync/temporal-protobuf-es)
 
-Community-maintained Temporal TypeScript payload converters for protobuf-es messages.
+**Status:** v0.0.1 (initial release).
 
-## Usage
+Temporal TypeScript payload converters for [`@bufbuild/protobuf`](https://github.com/bufbuild/protobuf-es) (protobuf-es) messages. The converters carry contract-only Temporal metadata on every payload — the `binary/protobuf` encoding marker, the fully qualified protobuf message type, and the raw proto wire bytes — so a workflow argument written by a TypeScript worker decodes byte-for-byte in a Rust or Go worker. Your clients, workers, and workflow/activity bodies stay handwritten against the Temporal SDK; this package only converts payloads.
 
-Create an app-local payload converter module and export a named `payloadConverter`:
+## Quick start
+
+Install the package and your protobuf-es runtime:
+
+```sh
+npm install @nu-sync/temporal-protobuf-es @bufbuild/protobuf @temporalio/common
+```
+
+Create an app-local payload converter module that exports a named `payloadConverter`, registering each generated message schema you exchange:
 
 ```ts
+// payload-converter.ts
 import { createProtobufEsPayloadConverter } from "@nu-sync/temporal-protobuf-es";
-import { EmptySchema } from "@bufbuild/protobuf/wkt";
-import { schemas as orderSchemas } from "./gen/orders_pb_register";
+import { MyMessageSchema } from "./gen/my_service_pb";
 
 export const payloadConverter = createProtobufEsPayloadConverter({
-  schemas: [
-    ...orderSchemas,
-    // Only needed when your workflows use google.protobuf.Empty.
-    EmptySchema,
-  ],
+  schemas: [MyMessageSchema],
   encoding: "binary",
 });
 ```
 
-The helper defaults to binary protobuf encoding for cross-language Temporal payload compatibility. Use `encoding: "json"` or `createJsonProtobufEsPayloadConverter(...)` for TypeScript-only applications that prefer proto3 JSON payloads. The package also keeps `make*` helper aliases for callers that prefer that naming style.
-
-Schema registration is explicit, including well-known types. If a workflow input or output uses `google.protobuf.Empty`, import `EmptySchema` from `@bufbuild/protobuf/wkt` and include it in the `schemas` array or generated schema inventory.
-
-`payloadConverterPath` modules must export a named `payloadConverter`, as shown above. The package ships both ESM and CommonJS entrypoints so Temporal's synchronous `require(...)` loader can load app-local converter modules.
-
-When configuring Temporal from ESM client or worker code, resolve that app-local module with `createRequire(import.meta.url)`:
+Point Temporal at that module by path. From ESM client or worker code, resolve it with `createRequire(import.meta.url)`:
 
 ```ts
 import { createRequire } from "node:module";
@@ -41,52 +39,66 @@ export const dataConverter = {
 };
 ```
 
-For multiple generated proto files, combine their inventories:
+`payloadConverterPath` modules must export a named `payloadConverter`. The package ships both ESM and CommonJS entrypoints so Temporal's synchronous `require(...)` loader can load app-local converter modules.
+
+See [`examples/`](./examples) for a complete `payload-converter.ts` + `client.ts` + `worker.ts` walkthrough.
+
+## Choosing an encoding
+
+Both modes always **decode** both wire formats. The `encoding` option only controls what gets **written**.
+
+| `encoding`         | Writes            | Use when                                                            |
+| ------------------ | ----------------- | ------------------------------------------------------------------- |
+| `binary` (default) | `binary/protobuf` | Cross-language interop (Rust/Go workers), wire-compatible payloads. |
+| `json`             | `json/protobuf`   | TypeScript-only apps that prefer readable proto3 JSON payloads.     |
+
+`createJsonProtobufEsPayloadConverter(...)` is shorthand for `encoding: "json"`. The package also keeps `make*` aliases for callers who prefer that naming style.
+
+## Well-known types
+
+Schema registration is **explicit for every type, including well-known types** (Empty, Timestamp, Duration, Any, ...). This is intentional: the registry mirrors exactly what your cross-language contract uses, which keeps the binary wire format aligned with the Rust sibling.
+
+If a payload references a message you did not register, the converter throws:
+
+```
+Got a `google.protobuf.Empty` protobuf message but cannot find corresponding message schema in `registry`
+```
+
+The fix is to add the matching `*Schema` to the `schemas` array. Import well-known type schemas from `@bufbuild/protobuf/wkt`:
 
 ```ts
-import { createProtobufEsPayloadConverter } from "@nu-sync/temporal-protobuf-es";
-import { schemas as customerSchemas } from "./gen/customers_pb_register";
-import { schemas as orderSchemas } from "./gen/orders_pb_register";
+import { EmptySchema } from "@bufbuild/protobuf/wkt";
 
 export const payloadConverter = createProtobufEsPayloadConverter({
-  schemas: [...orderSchemas, ...customerSchemas],
+  schemas: [MyMessageSchema, EmptySchema],
   encoding: "binary",
 });
 ```
 
-## Validation
+## Where the schemas come from
 
-```sh
-just test-unit
-just test-e2e
-just test-e2e-npm
-just test-e2e-sdk-loader
-just test-e2e-generated-schema
-just test-e2e-deno
-just test-e2e-rust
-just test-e2e-temporal-worker
-just verify
-just verify-integration
-just generate-fixtures
+You can register schemas by hand (as above), or generate a schema inventory.
+
+If you use [`protoc-gen-ts-temporal`](https://github.com/nu-sync/protoc-gen-ts-temporal), it emits a `_pb_register.ts` file per proto whose `schemas` export is a ready-made `readonly DescMessage[]` inventory. Spread one or more inventories into the array:
+
+```ts
+import { createProtobufEsPayloadConverter } from "@nu-sync/temporal-protobuf-es";
+import { EmptySchema } from "@bufbuild/protobuf/wkt";
+import { schemas as customerSchemas } from "./gen/customers_pb_register";
+import { schemas as orderSchemas } from "./gen/orders_pb_register";
+
+export const payloadConverter = createProtobufEsPayloadConverter({
+  schemas: [...orderSchemas, ...customerSchemas, EmptySchema],
+  encoding: "binary",
+});
 ```
 
-The e2e suite installs the packed npm tarball into temporary fixture apps, checks Node ESM/CommonJS loading, verifies Temporal SDK `loadDataConverter` behavior for `payloadConverterPath`, verifies a generated protobuf-es schema inventory, runs a Deno npm-import round trip, and verifies Rust binary wire-format compatibility without external services.
+## Related
 
-The generated schema fixture is generated from `test/e2e/generated-schema/orders.proto` with Buf and `@bufbuild/protoc-gen-es`. Run `just generate-fixtures` after changing fixture protos. `just check` regenerates the fixture and fails if the tracked generated files are stale.
+- [protoc-gen-ts-temporal](https://github.com/nu-sync/protoc-gen-ts-temporal) — TypeScript contract generator; produces the `_pb_register.ts` schema inventory this package consumes.
+- [protoc-gen-rust-temporal](https://github.com/nu-sync/protoc-gen-rust-temporal) — Rust contract generator for the same annotated protos (binary wire-format sibling).
+- [protoc-gen-temporal-interop](https://github.com/nu-sync/protoc-gen-temporal-interop) — cross-language interop harness that proves the TypeScript and Rust contracts exchange payloads.
 
-`just test-e2e-temporal-worker` is an explicit live integration gate. It requires an installed Temporal CLI or `TEMPORAL_TEST_SERVER_EXECUTABLE`, starts a local Temporal dev server, then runs a real `@temporalio/client` and `@temporalio/worker` with `dataConverter.payloadConverterPath`. It is intentionally outside `just release-check` because the publish workflow does not provision the Temporal CLI. Use `just verify-integration` when the Temporal CLI is available and you want the full local release check plus the live worker/client fixture.
+## Contributing
 
-## Release
-
-The official npm publish path is GitHub Actions. Create and publish a GitHub release whose tag matches `package.json`, such as `v0.0.1`; `.github/workflows/publish.yml` installs Node and Deno, runs `npm run release-check`, uploads the validated tarball, and publishes `@nu-sync/temporal-protobuf-es` to npm from that tarball.
-
-For a first-time package bootstrap, use a temporary npm automation token stored as the repository secret `NPM_TOKEN`; the workflow publishes with `npm publish --access public --provenance`. After the package exists on npm, configure npm trusted publishing for GitHub Actions with:
-
-- Package: `@nu-sync/temporal-protobuf-es`
-- Organization or user: `nu-sync`
-- Repository: `temporal-protobuf-es`
-- Workflow filename: `publish.yml`
-
-Then remove `NPM_TOKEN`. Future releases publish through OIDC trusted publishing without a long-lived npm token, and npm generates provenance automatically.
-
-If the GitHub release workflow fails before publishing to npm, fix the workflow, ensure the release tag points at the corrected commit, and manually dispatch `publish.yml` with the same tag.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for prerequisites, the local verification gate, the live integration test, and the release process. Changes are tracked in [CHANGELOG.md](./CHANGELOG.md).

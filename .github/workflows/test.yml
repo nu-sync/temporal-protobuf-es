@@ -41,3 +41,31 @@ jobs:
 
       - name: Run test suite
         run: npm test
+
+  integration:
+    name: Live Temporal worker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.x"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Temporal CLI
+        # The worker fixture boots a real dev server via the temporal CLI
+        # (TestWorkflowEnvironment with executable type "existing-path"); it
+        # throws rather than skips when the binary is absent.
+        run: |
+          curl -sSf https://temporal.download/cli.sh | sh
+          echo "$HOME/.temporalio/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Round-trip protobuf-es payloads through a live Worker
+        run: npm run test:e2e:temporal-worker

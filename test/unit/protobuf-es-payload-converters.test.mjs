@@ -60,6 +60,24 @@ test("binary protobuf converter serializes and round-trips protobuf-es messages"
   assert.deepEqual(converter.fromPayload(payload), message);
 });
 
+test("binary converter decodes a Node Buffer slice without reading past its bounds", () => {
+  const converter = new ProtobufEsBinaryPayloadConverter(registry);
+  const payload = converter.toPayload(timestamp());
+
+  // Simulate Temporal handing back data as a Buffer that is a view into a larger
+  // pooled ArrayBuffer (nonzero byteOffset, trailing bytes beyond byteLength).
+  const padded = Buffer.alloc(payload.data.length + 8, 0xff);
+  Buffer.from(payload.data).copy(padded, 4);
+  const bufferSlice = padded.subarray(4, 4 + payload.data.length);
+
+  const decoded = converter.fromPayload({
+    ...payload,
+    data: bufferSlice,
+  });
+
+  assert.deepEqual(decoded, timestamp());
+});
+
 test("json protobuf converter serializes and round-trips protobuf-es messages", () => {
   const converter = new ProtobufEsJsonPayloadConverter(registry);
   const message = timestamp();
